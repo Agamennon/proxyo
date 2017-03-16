@@ -1,0 +1,48 @@
+{
+  "name": "proxyo",
+  "version": "0.1.0",
+  "description": "Observable Proxy Framework",
+  "main": "dist/proxyo.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Agamennon/proxyo.git"
+  },
+  "keywords": [
+    "fast",
+    "serializable",
+    "state",
+    "proxy",
+    "observe",
+    "observable",
+    "data",
+    "binding",
+    "proxy",
+    "ES6",
+    "reactive"
+  ],
+  "authors": [
+    "Guilherme Guerchmann <gui@guerch.net> (https://github.com/Agamennon)"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Agamennon/proxyo/issues"
+  },
+  "homepage": "http://proxyo.js.org",
+  "devDependencies": {
+    "babel-loader": "^6.4.0",
+    "babel-preset-es2015": "^6.22.0",
+    "babel-preset-react": "^6.23.0",
+    "chai": "3.5.0",
+    "express": "^4.15.2",
+    "mocha": "2.5.3",
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "webpack": "^2.2.1",
+    "webpack-dev-middleware": "^1.10.1",
+    "webpack-hot-middleware": "^2.17.1"
+  },
+  "engines": {
+    "node": ">=6.0.0"
+  }
+}
