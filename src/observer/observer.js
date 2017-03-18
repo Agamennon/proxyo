@@ -1,13 +1,5 @@
 'use strict'
 
-
-/*export default {
- observe:observe,
- observable:observable,
- isObservable:isObservable,
- }*/
-
-
 const nextTick = require('./nextTick')
 const builtIns = require('./builtIns/index')
 const wellKnowSymbols = require('./wellKnownSymbols')
@@ -19,10 +11,9 @@ const queuedObservers = new Set()
 const enumerate = Symbol('enumerate')
 let queued = false
 let currentObserver
-const handlers = {get, ownKeys, set, deleteProperty,apply}
+const handlers = {get, ownKeys, set, deleteProperty}
 
 //gui
-var proxioMap = new Map()
 var interceptMap = new Map()
 //end gui
 
@@ -30,13 +21,7 @@ module.exports = {
   observe,
   observable,
   isObservable,
-  proxioMap,
   interceptMap
-}
-
-function apply (target, thisArg, argumentsList){
-  console.log('apply trap')
-  return Reflect(target, thisArg, argumentsList)
 }
 
 function observe (fn, context, ...args) {
@@ -109,8 +94,19 @@ function isObservable (obj) {
 
 
 
+/*
 
-
+function intercept(method, receiver ,key){
+  var interceptData = interceptMap.get(receiver);
+  var interceptResult;
+  if (interceptData){
+    if ((interceptData[0] === method) && (interceptData[1] === key || interceptData[1] === '')){
+      interceptResult = interceptData[2].apply(receiver,arguments)
+    }
+  }
+  return interceptResult
+}
+*/
 
 
 
@@ -118,50 +114,36 @@ function isObservable (obj) {
 function get (target, key, receiver) {
   if (key === '$raw') return target
 
-
-
-  console.log('triggering Get with key',key)
-
-  //console.log();
-
+//INTERCEPT
   var interceptData = interceptMap.get(receiver);
   var interceptResult;
-  if (interceptData){
-    if ((interceptData[0] === 'get') && (interceptData[1] === key || interceptData[1] === '')){
-      interceptResult = interceptData[2].apply(receiver,arguments)
+  if (interceptData) {
+    if ((interceptData[0] === 'get') && (interceptData[1] === key || interceptData[1] === '')) {
+      interceptResult = interceptData[2].apply(receiver, arguments)
     }
   }
+
   let result
-  console.log(interceptResult);
+
   if (interceptResult){
     result = interceptResult;
   }  else{
     result = Reflect.get(target, key, receiver)
   }
-
- // console.log('getting shit with target',target)
- // console.log('getting shit with receiver',receiver)
-
-  //observers = new WeakMap()
-
-  //const result = Reflect.get(target, key, receiver)
-
+//END INTERCEPT
 
   if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {
     return result
   }
   const isObject = (typeof result === 'object' && result) //typeof object its object (arrays are condierd objects too) or null por isso check result
 
-// const observable = isObject && proxies.get(result)
  let observable = isObject && proxies.get(result)
-
 
   //another gui devolve observers sempre
   if (!observable && isObject){
-    console.log('constructing new observer')
     observable =  toObservable(result)
   }
-//
+ //
 
   if (currentObserver) {
     registerObserver(target, key)
@@ -170,42 +152,23 @@ function get (target, key, receiver) {
     }
   }
 
-
-
-/*
-  //gui additions
+  //gui additions  captura metodos e da autobind apply neles
   if (typeof result == 'function' && result.name !== 'valueOf' && result.name !== 'toString' && result.name !== 'Object'){
-    console.log('trapping method')
-    console.log('target',target)
-    console.log('key',key)
-    console.log('receiver',receiver)
-    console.log('intercepted' + ' ' + result);
-    console.log('trigger end')
-    //   if (proxioMap.get(receiver) === 'State'){
-
-
     var origMethod = target[key];
-    console.log(receiver);
     return function(...args){
-      //console.log(args);
-
-      const res = origMethod.apply(this,args);
-
+      const res = origMethod.apply(receiver,args);
       return res
     }
-    // }
-
-  }*/
+  }
 //end gui
-
   return observable || result
-  //return observable || isObject ? toObservable(result):result
+
 }
 
 
 function set (target, key, value, receiver) {
 
-  console.log('triggering Set at key',key)
+  //console.log('triggering Set at key',key)
 //  console.log('triggering Set at key',key)
 
   var interceptData = interceptMap.get(receiver);
@@ -216,7 +179,7 @@ function set (target, key, value, receiver) {
     }
   }
 
-  console.log(interceptResult);
+
     //value = interceptResult
     //console.log('interceptResult',interceptResult)
     //value = interceptResult

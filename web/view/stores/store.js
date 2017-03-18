@@ -36,4 +36,6 @@ var store2 =  {
   }
 }
 
+
+
 export {store1,store2}

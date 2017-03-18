@@ -12,10 +12,9 @@ module.exports = {
   observe:observer.observe,
   observable:observer.observable,
   isObservable:observer.isObservable,
-  observer,
-  namespace:proxyo.namespace,
+  observer:observer,
   State:proxyo.State,
-  Actions:proxyo.Actions,
   intercept:proxyo.intercept,
-  connect: require('./proxyo/hoc')
+  connect: require('./proxyo/connect'),
+  Provider: require('./proxyo/provider'),
 }

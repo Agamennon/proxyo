@@ -1,4 +1,4 @@
-usando
+
 https://www.npmjs.com/package/linklocal
 
   {

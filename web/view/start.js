@@ -1,12 +1,19 @@
-import {observer} from '../../src/index'
+//import {observer} from '../../src/index'
 import ReactDOM from 'react-dom'
-import {store1} from './stores/store'
-import {namespace,State,intercept,Actions,observable,observe} from '../../src/index'
-
+//import {store1} from './stores/store'
+import {observe} from '../../src/index'
 import React from 'react'
 //import App from './app'
+//import Counter from './counter'
 
-var nested = {
+import TodoList from './todo/TodoList'
+import {Provider} from '../../src/index'
+import todoStore from './todo/todoStore'
+
+
+
+
+/*var nested = {
   nestedMethod:()=>{
     console.log('heeelo from nested')
 
@@ -27,7 +34,7 @@ intercept (State,'get','store1',function(target,prop,value){
   //return target[prop]
 })
 
-console.log(State.store1)
+console.log(State.store1)*/
 //State.store1.tel ='heklo'
 //State.store1.nested.inside.cock = 'changed'
 
@@ -131,12 +138,13 @@ setTimeout(()=>{
 
 //window.obs = obs;
 
-/*
 
 ReactDOM.render(
-      <App/>,
+    <Provider proxyoStores={todoStore}>
+      <TodoList/>
+    </Provider>
+      ,
       document.getElementById('app')
   )
-*/
 
 

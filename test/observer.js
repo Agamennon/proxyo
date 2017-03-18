@@ -8,8 +8,6 @@ const observer = require('../src/index').observer
 describe('nx-observe', () => {
   describe('observable', () => {
     it('should throw TypeError on invalid arguments', () => {
-
-
       expect(() => observer.observable(12)).to.throw(TypeError)
       expect(() => observer.observable('string')).to.throw(TypeError)
       expect(() => observer.observable({})).to.not.throw(TypeError)
@@ -48,6 +46,23 @@ describe('nx-observe', () => {
       observable.nested2 = observer.observable({})
       expect(observer.isObservable(obj.nested1)).to.be.false
       expect(observer.isObservable(obj.nested2)).to.be.false
+    })
+
+    it('GUI- should retrun observables when returning non observable objects from object that is observable, and they need to be the same instance all the time', () => {
+      const obj = {
+        propnear:
+            {
+              number:10,
+              propfar:{
+                name:'gui'
+              }
+            }
+      }
+      var obs = observer.observable(obj)
+      var test = obs.propnear.propfar
+      var test2 = obs.propnear.propfar
+      expect(observer.isObservable(test)).to.be.true
+      expect(test).to.equal(test2)
     })
   })
 

@@ -21,7 +21,9 @@ module.exports = [{
             presets: [
               ["es2015", {"modules": false}],
               "react"
+
             ],
+            plugins:["transform-class-properties"],
           }
         }],
         exclude: /node_modules/
