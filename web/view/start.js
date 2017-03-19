@@ -1,7 +1,7 @@
 //import {observer} from '../../src/index'
 import ReactDOM from 'react-dom'
 //import {store1} from './stores/store'
-import {observe} from '../../src/index'
+import {observer} from '../../src/index'
 import React from 'react'
 //import App from './app'
 //import Counter from './counter'
@@ -10,6 +10,22 @@ import TodoList from './todo/TodoList'
 import {Provider} from '../../src/index'
 import todoStore from './todo/todoStore'
 
+/*
+
+
+var temp = observer.observable({name:'gui'});
+
+var signal = observer.observe(()=>{
+  console.log(temp.name)
+})
+
+
+
+setTimeout(()=>{
+  console.log('temp changed should print below')
+  temp.name = 'leo'
+},1000)
+*/
 
 
 

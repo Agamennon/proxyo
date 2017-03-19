@@ -114,6 +114,9 @@ function intercept(method, receiver ,key){
 function get (target, key, receiver) {
   if (key === '$raw') return target
 
+/*  console.log("proxyo get key- ",key)
+  console.log("proxyo get target- ",target)
+  console.log("proxyo get receiver- ",receiver)*/
 //INTERCEPT
   var interceptData = interceptMap.get(receiver);
   var interceptResult;
