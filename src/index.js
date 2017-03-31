@@ -5,16 +5,30 @@ import {CreateState,globalState, globalActions}  from './proxyo/createState'
 export {CreateState,globalState,
   globalActions,observer}
 */
+/*
 var observer = require('./observer/observer');
+var observerLight = require('./observer/observerLight');
+var proxyo = require('./proxyo/proxyo');*/
+var observer = require('./observer/observerLight');
+var observerLight = require('./observer/observerLight');
 var proxyo = require('./proxyo/proxyo');
 
+
 module.exports = {
+  observer:observer,
   observe:observer.observe,
   observable:observer.observable,
   isObservable:observer.isObservable,
-  observer:observer,
-  State:proxyo.State,
+  proxies:observer.proxies,
+  toObservable:proxyo.toObservable,
+  action:proxyo.action,
+  proxyo:proxyo,
+  computedMap:proxyo.computedMap,
+  computed:proxyo.computed,
+  replaceState:proxyo.replaceState,
+  state:proxyo.state,
   intercept:proxyo.intercept,
   connect: require('./proxyo/connect'),
   Provider: require('./proxyo/provider'),
 }
+

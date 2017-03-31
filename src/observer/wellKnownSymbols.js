@@ -7,6 +7,7 @@ for (let key of Object.getOwnPropertyNames(Symbol)) {
   if (typeof value === 'symbol') {
     wellKnowSymbols.add(value)
   }
+
 }
 
 module.exports = wellKnowSymbols

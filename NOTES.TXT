@@ -1,0 +1,42 @@
+ }*/
+function wrap(obj){
+    // obj.fullName2.bind(compu)
+  Reflect.ownKeys(obj).forEach((key)=>{
+      console.log(obj[key])
+      var descriptor = (Reflect.getOwnPropertyDescriptor(obj, key))
+      if (Array.isArray(descriptor.value)){
+        if (descriptor.value[0] === 'proxyo_computed'){
+          descriptor.value = descriptor.value[1].call(obj)
+          Reflect.defineProperty(obj,key,descriptor)
+
+        }
+      }
+
+    })
+
+    return obj
+  }
+
+function compu (fn) {
+    return ['proxyo_computed',fn]
+  }
+
+
+
+var user = {
+   firstName: "Michel",
+    lastName: "Weststrate",
+    get fullName2 (){
+
+      return this.firstName + " " + this.lastName
+    },
+    fullname3 :function(){
+
+      return 'ha'
+    }(),
+    fullName: compu(function(){
+
+      //return this.firstName + " " + this.lastName
+    })
+  }
+

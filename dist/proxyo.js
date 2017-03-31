@@ -90,48 +90,35 @@ const wellKnowSymbols = __webpack_require__(11)
 const proxies = new WeakMap()
 const observers = new WeakMap()
 const queuedObservers = new Set()
-
+const imediateObservers = new Set()
 const enumerate = Symbol('enumerate')
+
+
 let queued = false
 let currentObserver
-const handlers = {get, ownKeys, set, deleteProperty}
 
-//gui
-var interceptMap = new Map()
-//end gui
+const handlers = {get, set, ownKeys, deleteProperty}
 
 module.exports = {
+  proxies,
   observe,
   observable,
   isObservable,
-  interceptMap
 }
 
+
 function observe (fn, context, ...args) {
+
   if (typeof fn !== 'function') {
     throw new TypeError('First argument must be a function')
   }
+ // console.log('-------------------------------------------------------IMEDIATE',imediate)
   args = args.length ? args : undefined
-  const observer = {fn, context, args, observedKeys: [], exec, unobserve, unqueue}
-  runObserver(observer)
+  const observer = {fn, context, args, observedKeys: [],unobserve}
+  runObserver(observer,true)
   return observer
 }
 
-function exec () {
-  runObserver(this)
-}
-
-function unobserve () {
-  if (this.fn) {
-    this.observedKeys.forEach(unobserveKey, this)
-    this.fn = this.context = this.args = this.observedKeys = undefined
-    queuedObservers.delete(this)
-  }
-}
-
-function unqueue () {
-  queuedObservers.delete(this)
-}
 
 function observable (obj) {
   obj = obj || {}
@@ -143,18 +130,23 @@ function observable (obj) {
 }
 
 function toObservable (obj) {
-  let observable
-
+ /* let observable
   const builtIn = builtIns.get(obj.constructor)//builtIns eh um mapa (get pega o valor com a chave obj.constructor)
-
-  //se o que for passado foi contruido com um contrutor do tipo function, como Map Set do proprio motor
   if (typeof builtIn === 'function') {
-    observable = builtIn(obj, registerObserver, queueObservers)
+    console.log('BINGO BINGO BINGO')
+    observable = builtIn(obj, registerObserver, queueObserver)
   } else if (!builtIn) { //quando builtin eh diferente de function e contem valor????
     observable = new Proxy(obj, handlers)
   } else {
     observable = obj
   }
+  proxies.set(obj, observable)
+  proxies.set(observable, observable)
+  observers.set(obj, new Map())
+  return observable*/
+
+  let observable
+  observable = new Proxy(obj, handlers)
   proxies.set(obj, observable)
   proxies.set(observable, observable)
   observers.set(obj, new Map())
@@ -170,180 +162,97 @@ function isObservable (obj) {
 
 
 
-
-
-
-
-
-
-
-/*
-
-function intercept(method, receiver ,key){
-  var interceptData = interceptMap.get(receiver);
-  var interceptResult;
-  if (interceptData){
-    if ((interceptData[0] === method) && (interceptData[1] === key || interceptData[1] === '')){
-      interceptResult = interceptData[2].apply(receiver,arguments)
-    }
-  }
-  return interceptResult
-}
-*/
-
-
-
-
 function get (target, key, receiver) {
   if (key === '$raw') return target
 
-/*  console.log("proxyo get key- ",key)
-  console.log("proxyo get target- ",target)
-  console.log("proxyo get receiver- ",receiver)*/
-//INTERCEPT
-  var interceptData = interceptMap.get(receiver);
-  var interceptResult;
-  if (interceptData) {
-    if ((interceptData[0] === 'get') && (interceptData[1] === key || interceptData[1] === '')) {
-      interceptResult = interceptData[2].apply(receiver, arguments)
-    }
-  }
+  var result = Reflect.get(target, key, receiver)
+  console.log('getting', key, target)
 
-  let result
-
-  if (interceptResult){
-    result = interceptResult;
-  }  else{
-    result = Reflect.get(target, key, receiver)
-  }
-//END INTERCEPT
-
-  if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {
+  if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {   //NOT OBSERVE WELL KNOWN SIMBOLS
     return result
   }
+
   const isObject = (typeof result === 'object' && result) //typeof object its object (arrays are condierd objects too) or null por isso check result
+  let observable = isObject && proxies.get(result)
 
- let observable = isObject && proxies.get(result)
-
-  //another gui devolve observers sempre
   if (!observable && isObject){
     observable =  toObservable(result)
   }
- //
 
   if (currentObserver) {
+  //  console.log('currentObserver set')
     registerObserver(target, key)
     if (isObject) {
       return observable || toObservable(result)
     }
   }
 
-  //gui additions  captura metodos e da autobind apply neles
-  if (typeof result == 'function' && result.name !== 'valueOf' && result.name !== 'toString' && result.name !== 'Object'){
-    var origMethod = target[key];
-    return function(...args){
-      const res = origMethod.apply(receiver,args);
-      return res
-    }
-  }
-//end gui
-  return observable || result
 
+  return observable || result
 }
 
 
 function set (target, key, value, receiver) {
 
-  //console.log('triggering Set at key',key)
-//  console.log('triggering Set at key',key)
+  console.log('setting' ,key, target , value)
+  if (key === 'length' || value !== Reflect.get(target, key, receiver)) { //lenght to observe changes in arrays
 
-  var interceptData = interceptMap.get(receiver);
-  var interceptResult;
-  if (interceptData){
-    if ((interceptData[0] === 'set') && (interceptData[1] === key || interceptData[1] === '')){
-      interceptResult = interceptData[2].apply(receiver,arguments)
-    }
+//  if (value !== Reflect.get(target, key, receiver)) {
+    console.log('setting introspect',key,value,target)
+    queueObserver(target, key)
+    queueObserver(target, enumerate)
   }
-
-
-    //value = interceptResult
-    //console.log('interceptResult',interceptResult)
-    //value = interceptResult
-    if (key === 'length' || value !== Reflect.get(target, key, receiver)) {
-      queueObservers(target, key)
-      queueObservers(target, enumerate)
-    }
-    if (typeof value === 'object' && value) {
-      value = value.$raw || value
-    }
-    //return Reflect.set(target, key, value, receiver)
-    //mudanca grava tudo como observer
-   // return target[key] = value
-   // return Reflect.set(target, key, (typeof value === 'object' && value) ? toObservable(value): value, receiver)
-    return Reflect.set(target, key, value, receiver)
-
-
+  if (typeof value === 'object' && value) {
+    value = value.$raw || value
+  }
+  return Reflect.set(target, key, value, receiver)
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function registerObserver (target, key) {
-  if (currentObserver) {
-    const observersForTarget = observers.get(target)
-    let observersForKey = observersForTarget.get(key)
-    if (!observersForKey) {
-      observersForKey = new Set()
-      observersForTarget.set(key, observersForKey)
-    }
-    if (!observersForKey.has(currentObserver)) {
-      observersForKey.add(currentObserver)
-      currentObserver.observedKeys.push(observersForKey)
-    }
+  console.log('regestring',key,target)
+  const observersForTarget = observers.get(target)  //volta um mapa que contem as chaves desse objeto
+  let observersForKey = observersForTarget.get(key)  //volta um set que contem os pares
+  if (!observersForKey) {
+    observersForKey = new Set()
+    observersForTarget.set(key, observersForKey)
+    console.log('seting new observer for target ',key,observersForKey)
   }
-}
-
-function ownKeys (target) {
-  registerObserver(target, enumerate)
-  return Reflect.ownKeys(target)
-}
-
-
-function deleteProperty (target, key) {
-  if (Reflect.has(target, key)) {
-    queueObservers(target, key)
-    queueObservers(target, enumerate)
+  if (!observersForKey.has(currentObserver)) {
+    observersForKey.add(currentObserver)
+    currentObserver.observedKeys.push(observersForKey)
   }
-  return Reflect.deleteProperty(target, key)
+
+ // currentObserver.observedKeys.push(observersForKey)
+  //observersForKey.add(currentObserver)
 }
 
-function queueObservers (target, key) {
+
+function queueObserver (target,key) {
+  console.log('queueObserver for',key,target)
   const observersForKey = observers.get(target).get(key)
-  if (observersForKey && observersForKey.constructor === Set) {
-    observersForKey.forEach(queueObserver)
-  } else if (observersForKey) {
-    queueObserver(observersForKey)
-  }
-}
+  if (observersForKey) {
+ //   console.log('observer for key found!',key)
+    observersForKey.forEach((observer)=>{
+      //imediateObservers.add()
+    //  if (!observer.imediate){
+        queuedObservers.add(observer)
+  //    } else {
+     //   console.log('running imediate')
+       // imediateObservers.add(observer)
+    //    runObserver(observer)
+  //    }
 
-function queueObserver (observer) {
-  if (!queued) {
-    nextTick(runObservers)
-    queued = true
+
+    })
   }
-  queuedObservers.add(observer)
+
+
+  if (!queued) {
+
+     nextTick(runObservers)
+     queued = true
+  }
 }
 
 function runObservers () {
@@ -352,18 +261,54 @@ function runObservers () {
   queued = false
 }
 
-function runObserver (observer) {
+function runObserver (observer,firstRun) {
+  console.log('runObserver',observer)
   try {
-    currentObserver = observer
-    observer.fn.apply(observer.context, observer.args)
+  // if (firstRun){
+      currentObserver = observer
+   // }
+     observer.fn.apply(observer.context, observer.args)
   } finally {
-    currentObserver = undefined
+  //  if (firstRun){
+      currentObserver = undefined
+  //  }
+
+
   }
+
 }
+
+function ownKeys (target) {  //uses in for in loops and  enumerate is just a simbol to tag enumeration
+  if (currentObserver) {
+    console.log ('-------------- target ownKeys', target)
+    registerObserver(target, enumerate)
+  } else {
+    console.log (' ELSE------------------ target ownKeys', target)
+  }
+  return Reflect.ownKeys(target)
+}
+
 
 function unobserveKey (observersForKey) {
   observersForKey.delete(this)
 }
+
+function unobserve () {
+  if (this.fn) {
+    this.observedKeys.forEach(unobserveKey, this)
+    this.fn = this.context = this.args = this.observedKeys = undefined
+    queuedObservers.delete(this)
+  }
+}
+
+function deleteProperty (target, key) {
+  if (Reflect.has(target, key)) {
+    queueObserver(target, key)
+    queueObserver(target, enumerate)
+  }
+  return Reflect.deleteProperty(target, key)
+}
+
 
 
 
@@ -380,95 +325,168 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
 
 
 var React = __webpack_require__ (1)
+//var observer = require('../observer/observer')
 var observer = __webpack_require__(0)
 var isObjectShallowModified = __webpack_require__ (13);
 var toClass = __webpack_require__ (14);
 var hoistStatics = __webpack_require__(12);
 
-var connect = (Comp,obs) => {
+
+
+var connect = (...params) => {
 //https://github.com/mobxjs/mobx-react/blob/master/src/inject.js
-  Comp = toClass(Comp);
+  //Comp = toClass(Comp);
 
-  class Enhancer extends Comp {
+  if (typeof params[0] === 'function'){
+    //console.log ('sem opcoes vamos colocar tudo em um objeto store ou vamos colocar tudo em props?')
+    var mode = 'noOptions'
+  } else{
 
-   /* static contextTypes = {
-      proxyoStores: React.PropTypes.object
-    };*/
-
-    constructor(props,context){
-
-    //  console.log('constructor');
-      super(...arguments);
-    //  console.log(context);
-      this._fn = this._fn.bind(this);
-      this._signal = null;
-      this._mounted = false;
-      this._renderResult = null;
+    if (!Array.isArray(params[0])){
+       throw new Error("Store options must be an array");
     }
-
-    _fn (){
-      this._renderResult = super.render()
-      if (this._mounted){
-        this.forceUpdate()
-      }
-    }
-
-    componentDidMount() {
-     // console.log('did mount')
-      this._mounted = true;
-      if (super.componentWillUnmount){
-        super.componentWillUnmount()
-      }
-    }
-
-     shouldComponentUpdate(nextProps,nextState) {
-      //return false
-      delete this.props.store
-    //  console.log(this.props)
-    //  console.log(nextProps)
-    //  console.log(isObjectShallowModified(this.props, nextProps));
-      if (this.state !== nextState) {
-         return true;
-       }
-      return isObjectShallowModified(this.props, nextProps);
-
-     }
-
-    componentWillUnmount() {
-   //   console.log('willunmount')
-      if (super.componentWillUnmount){
-        super.componentWillUnmount()
-      }
-      this._mounted = false
-      if (this._signal) {
-        this._signal.unobserve();
-        //  console.log("signal released")
-      }
-    }
-    render() {
-     this.props =  Object.assign({}, this.props, {store:obs})
-//     console.log('render called ->', Comp.name)
-     if (!this._mounted){
-        this._signal = observer.observe(this._fn,this);
-      }
-     return this._renderResult
-    }
-  };
-
-  function getDisplayName (Comp) {
-    return Comp.displayName ||
-        Comp.name || `Component`
+    var mode = 'withOptions'
+    var options = params[0]
   }
 
-  Enhancer.displayName = `HOCProxyo(${getDisplayName(Comp)})`
 
-  Enhancer.contextTypes = {
-    proxyoStores: React.PropTypes.object
-  };
+  var factory = function (Comp){
+    Comp = toClass(Comp);
 
-  hoistStatics(Enhancer,Comp)
+    class Enhancer extends Comp {
 
-  return Enhancer
+      /* static contextTypes = {
+       proxyoStores: React.PropTypes.object
+       };*/
+
+      constructor(props,context){
+
+        //console.log('constructor');
+        super(...arguments);
+
+        this.obs = {};
+        if (context.proxyoStores){
+          this.obs = context.proxyoStores
+        }
+
+
+
+
+        //  console.log(context);
+        this._fn = this._fn.bind(this);
+        this._signal = null;
+        this._mounted = false;
+        this._renderResult = null;
+
+      }
+
+      _fn (){
+        this._renderResult = super.render()
+        if (this._mounted){
+          console.log('change detected on '+getDisplayName(Comp))
+          this.forceUpdate()
+        }
+      }
+
+      componentDidMount() {
+        // console.log('did mount')
+        this._mounted = true;
+        if (super.componentWillUnmount){
+          super.componentWillUnmount()
+        }
+      }
+
+      shouldComponentUpdate(nextProps,nextState) {
+        //return false
+       // delete this.props.store
+        //  console.log(this.props)
+        //  console.log(nextProps)
+        //  console.log(isObjectShallowModified(this.props, nextProps));
+        if (this.state !== nextState) {
+          return true;
+        }
+        return isObjectShallowModified(this.props, nextProps);
+
+      }
+
+      componentWillUnmount() {
+        //   console.log('willunmount')
+        if (super.componentWillUnmount){
+          super.componentWillUnmount()
+        }
+        this._mounted = false
+        if (this._signal) {
+          this._signal.unobserve();
+          //  console.log("signal released")
+        }
+      }
+      render() {
+
+
+        console.log('rendering HOC for -> '+getDisplayName(Comp))
+
+
+
+        //this.props =  Object.assign({}, this.props, {store:obs})
+        switch(mode) {
+          case 'noOptions':
+            this.props = Object.assign({}, this.obs, this.props)
+            break
+          case 'withOptions':
+            var selection = {}
+            var tt = options.map((value) => {
+              if (value in this.obs) {
+                selection[value] = this.obs[value]
+              }
+            })
+            console.log('selection',selection);
+            this.props = Object.assign({}, selection, this.props)
+            break
+        }
+
+
+
+
+//     console.log('render called ->', Comp.name)
+        if (!this._mounted){
+          this._signal = observer.observe(this._fn,this);
+        }
+        return this._renderResult
+      }
+    };
+
+    function getDisplayName (Comp) {
+      return Comp.displayName ||
+          Comp.name || `Component`
+    }
+
+    Enhancer.displayName = `HOCProxyo(${getDisplayName(Comp)})`
+
+    Enhancer.contextTypes = {
+      proxyoStores: React.PropTypes.object
+    };
+
+    hoistStatics(Enhancer,Comp)
+
+    return Enhancer
+  }
+
+
+  if (typeof params[0] === 'function'){
+    return factory(params[0])
+  }
+  return factory
+  /*if (params.length === 0){
+    //factory
+    console.log('no params?')
+    console.log(arguments)
+    return factory(arguments[5])
+  } else {
+    return factory
+  }
+
+*/
+
 }
 
 
@@ -531,23 +549,146 @@ module.exports = Provider
 /* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
-
-
+/*var observable = require('../observer/observer').observable
+ var interceptMap = require('../observer/observer').interceptMap
+ var observer = require('../observer/observer')*/
 var observable = __webpack_require__(0).observable
-var interceptMap = __webpack_require__(0).interceptMap
+var observer = __webpack_require__(0)
 
+var computedResult = new Set();
 
 var intercept = function(target,method,property,interceptor){
   interceptMap.set(target,[method,property,interceptor])
 }
 
-var State = function(state){
-  return observable(state);
+function action (...params){
+
+  var originalFn
+  var fn = function(...args){
+    var context = observer.proxies.get(this)
+    originalFn.apply(context||this,arguments)
+  }
+
+  var wraper = function (target,key,descriptor) {
+    originalFn = descriptor.value
+    descriptor.value = fn
+  }
+  //determinar o estilo usado @anotation ou function() se userFn existe eh function senao vai ser uma anotation
+  var userFn = (typeof params[0] === 'function') ? params[0] : null
+  if (!userFn){
+    userFn = ((typeof params[0] === 'string') && (typeof params[1] === 'function')) ? params[1] : null
+  }
+  if (userFn) {    //fazer o certo para functions()
+    originalFn = userFn
+    return fn;
+  }
+  else { //fazer o certo para actions
+    return (typeof params[0] === 'object') ? wraper(...params) : wraper
+  }
+
 }
+
+
+function computed (...params){
+
+  console.log(params)
+
+  var target = params[0]
+  var key = params[1]
+  var descriptor = params[2]
+
+  var originalGet = descriptor.get
+  var result
+
+  var wraper = function () {
+    console.log('inside wrapper')
+    result = originalGet.apply(this)
+    console.log('wrapper result ===============',result)
+  }
+  var signal = null
+
+  descriptor.get = function(){
+    console.log('inside get ')
+
+    if (!signal){
+      console.log(this)
+      //var ctx = observer.proxies.get(this)
+      console.log('NO SIGNAL')
+      //wraper.apply(this,arguments)
+    //  Promise.resolve().then(()=>{
+
+      signal = observer.observe(wraper,this)
+   //   })
+     /* setTimeout(()=>{
+        signal = observer.observe(wraper,this,arguments)
+      },0)*/
+
+
+      console.log(result)
+    }
+    console.log('RESSSSSSSSSSSSULT',result)
+    return result
+  }
+
+  //descriptor.get.bind(target)
+
+
+
+
+
+  /*var originalFn
+   var fn = function(...args){
+   var context = observer.proxies.get(this)
+   originalFn.apply(context||this,arguments)
+   }
+
+   var wraper = function (target,key,descriptor) {
+   originalFn = descriptor.value
+   descriptor.value = fn
+   }
+   //determinar o estilo usado @anotation ou function() se userFn existe eh function senao vai ser uma anotation
+   var userFn = (typeof params[0] === 'function') ? params[0] : null
+   if (!userFn){
+   userFn = ((typeof params[0] === 'string') && (typeof params[1] === 'function')) ? params[1] : null
+   }
+   if (userFn) {    //fazer o certo para functions()
+   originalFn = userFn
+   return fn;
+   }
+   else { //fazer o certo para actions
+   return (typeof params[0] === 'object') ? wraper(...params) : wraper
+   }*/
+
+}
+
+
+/*
+ function Action(name,fn){
+ return function(...args){
+ var context = observer.proxies.get(this)
+ return fn.apply(context||this,arguments)
+ }
+ }
+ */
+
+var state = observable({})
+
+var replaceState = (userState)=> {
+  Object.keys(state).map((key)=>{
+    delete state[key]
+  })
+  Object.assign(state,userState)
+  return state
+}
+
+
 
 module.exports = {
   intercept,
-  State
+  computed,
+  replaceState,
+  state,
+  action
 }
 
 
@@ -984,19 +1125,32 @@ import {CreateState,globalState, globalActions}  from './proxyo/createState'
 export {CreateState,globalState,
   globalActions,observer}
 */
+
+/*
+var observer = require('./observer/observer');
+var observerLight = require('./observer/observerLight');
+var proxyo = require('./proxyo/proxyo');*/
 var observer = __webpack_require__(0);
+var observerLight = __webpack_require__(0);
 var proxyo = __webpack_require__(4);
+
 
 module.exports = {
   observe:observer.observe,
   observable:observer.observable,
+  observerLight:observerLight,
   isObservable:observer.isObservable,
   observer:observer,
-  State:proxyo.State,
+  action:proxyo.action,
+  computed:proxyo.computed,
+  replaceState:proxyo.replaceState,
+  state:proxyo.state,
   intercept:proxyo.intercept,
   connect: __webpack_require__(2),
   Provider: __webpack_require__(3),
 }
+
+
 
 /***/ })
 /******/ ]);

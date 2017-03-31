@@ -10,7 +10,7 @@ console.log(State)
 //var store = namespace('store1',store1);
 
 
-var testeComp =(props) => {
+var testeComp = (props) => {
 
   const changeName = (e) => {
 

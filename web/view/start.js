@@ -1,166 +1,196 @@
 //import {observer} from '../../src/index'
 import ReactDOM from 'react-dom'
 //import {store1} from './stores/store'
-import {observer} from '../../src/index'
+import {observer,observable,observe,replaceState,computed,test,action,observerLight,computedMap,proxies} from '../../src/index'
 import React from 'react'
-//import App from './app'
-//import Counter from './counter'
 
 import TodoList from './todo/TodoList'
 import {Provider} from '../../src/index'
 import todoStore from './todo/todoStore'
+//import todoViewModel from './todo/todoViewModal'
+
 
 /*
+ const user = observable({
+ firstName: "Michel",
+ lastName: "Weststrate",
+ // MobX computed attribute
+ fullName: computed(function() {
+ return this.firstName + " " + this.lastName
+ })
+ })
+ */
 
+/*var compu =  function(fn,context) {
+ console.log(this)
+ return fn.call(context)
+ }
 
-var temp = observer.observable({name:'gui'});
+ function wrap(obj){
+ // obj.fullName2.bind(compu)
+ return obj
+ }*/
+/*
+function wrap(obj){
+    // obj.fullName2.bind(compu)
+  Reflect.ownKeys(obj).forEach((key)=>{
+      console.log(obj[key])
+      var descriptor = (Reflect.getOwnPropertyDescriptor(obj, key))
+      if (Array.isArray(descriptor.value)){
+        if (descriptor.value[0] === 'proxyo_computed'){
+          descriptor.value = descriptor.value[1].call(obj)
+          Reflect.defineProperty(obj,key,descriptor)
 
-var signal = observer.observe(()=>{
-  console.log(temp.name)
-})
+        }
+      }
 
+    })
 
-
-setTimeout(()=>{
-  console.log('temp changed should print below')
-  temp.name = 'leo'
-},1000)
-*/
-
-
-
-/*var nested = {
-  nestedMethod:()=>{
-    console.log('heeelo from nested')
-
-  },
-      inside:[{a:1},{b:2}],
-      bab:'gui'
-}
-
-State.store1 = store1
-//State.store1.nested = nested
-
-intercept (State,'get','store1',function(target,prop,value){
-
-  console.log(target);
-  console.log(prop);
-  console.log(value);
- // value = 'haha'
-  //return target[prop]
-})
-
-console.log(State.store1)*/
-//State.store1.tel ='heklo'
-//State.store1.nested.inside.cock = 'changed'
-
-//State.store1.nested.bab = 'aaaaa'
-//State.store1.myaction();
-//State.store1.myaction  = ()=>{console.log('new action')}
-//State.store1.nested.nestedMethod()
-//State.store1.name = 'aaa'
-//State.store1.name = 'changaaaed'
-
-
-
-//State.store1.name = 'aaa'
-/*var a = {name:'gui',nested:{other:'leo'}};
-var t = new Proxy(a,{
-  get:function(a,b,c){
-    console.log(a)
-    console.log(b)
-    console.log(c)
-    return a[b]
-  },
-  set:function(a,b,c,d){
-    console.log(a)
-    console.log(b)
-    console.log(c)
-    console.log(d)
-    if (typeof a === 'object'){
-      new Proxya[b] = c
-    }else{
-      a[b] = c
-    }
-
-    return true
+    return obj
   }
-})
-//console.log(t.name)
-t.nested.other = 'aaaa'
-t.nested.other = 'aaaaaa'
-t.name = 'aaaaaa'*/
-//console.log(t.nested.other);
-//console.log(t.name)
-//State.store1.name = 'chvvvvanged'
 
-//console.log(State.store1.name)
-//console.log(State.store1.name)
-//console.log(State.store1.name)
+function compu (fn) {
+    return ['proxyo_computed',fn]
+  }
 
-//State.nested.nestedMethod();
-//namespace('store1',store1);
 
-//State.superStore = store1;
+
+var user = {
+   firstName: "Michel",
+    lastName: "Weststrate",
+    get fullName2 (){
+
+      return this.firstName + " " + this.lastName
+    },
+    fullname3 :function(){
+
+      return 'ha'
+    }(),
+    fullName: compu(function(){
+
+      //return this.firstName + " " + this.lastName
+    })
+  }
+
+
+
+console.log(user.fullname3);
+console.log(user.fullname3);
+console.log(user.fullname3);
+console.log(user.fullname3);
+console.log(user);
+console.log(user);
+console.log(user);
+console.log(user);
+console.log(user);
+
+
+
+user.lastName = "Vaillant"
+console.log(JSON.stringify(user));
+
+
+*/
+
+/*@test
+ class teste {
+ firstName = "michel"
+ lastName = "wast"
+ @computed get fullName (){
+ console.log('-----computing full name ---------')
+ return this.firstName + ' ' + this.lastName
+ //return this.firstName + ' ' +  this.lastName
+ }
+ }
+ var o = observable (new teste());
+ console.log(JSON.stringify(o))
+ console.log(o.fullName)
+ console.log(o.fullName)
+ console.log(o.fullName)
+ console.log(o.fullName)
+ console.log(o.fullName)
+ console.log(o.fullName)
+ console.log(o.fullName)
+
+ console.log(o)*/
 
 
 
 /*
-var obs = observable(store1)
-//console.log(JSON.stringify(obs))
-observe(()=>{
-     console.log(obs.name)
-})
-*/
+ var count = {
+ counter: 111,
+ counter2: 222
+ }
+ let ooo = observer.observable(count)
 
-//console.log(State.store1.nested.bab)
+ console.log('----------------------------------------------------------------------------------------------')
+
+ observer.reaction(()=>{
+ console.log(ooo.counter)
+ console.log(ooo.counter2)
+ },null,function(){
+ console.log('i work dude')
+
+ })
+
+ setTimeout(()=>{
+ console.log('doing')
+ ooo.counter = 10
+ ooo.counter2 = 30
+ },2000)
+ */
 
 
-/*State.store1.nested.nestedMethod = (a) => {
-  console.log(a)
-  console.log('nested called');
-  //this.name='nested method'
-  //State.store1.name ='nested method'
-  //console.log(store1);
-},*/
-//Actions.store1.myaction()
-//Actions.store1.myaction()
-//Actions.store1.myaction()
-//State.store1.outside = {a:1}
-
-//Actions.store1.guiAction()
 
 
+/*var todoProx = proxies.get(state.todos)
+ console.log(computedMap.get(todoProx))*/
+
+
+//setTimeout(()=>{
+/*  observe(function() {
+ // console.log(state.todos.firstName)
+ // console.log(state.todos.firstName + ' ----------------------------------------------------------------------------')
+ if (state.todos.firstName.length > 9) {
+ console.log(state.todos.firstName + ' ----------------------------------------------------------------------------')
+ state.todos.firstName = state.todos.firstName + ' o LONGO'
+ }
+ })*/
+//},0)
 /*
 
-observe(()=>{
-  console.log('bab-'+State.store1.name)
-},State)
+ var count = {
+ counter: 111,
+ counter2: 222
+ }
+ let ooo = observerLight.observable(count)
 
-setTimeout(()=>{
- // State.store1.name =' new name'
-  //console.log(State.store1.name)
-  State.store1.myaction()
- // State.store1.myaction('guo')
- // State.merda()
-  //var t = State.store1.myaction
-  //s.myaction();
- // console.log(State.store1.name)
-},2000)
-*/
+ observerLight.observe(()=>{
+ console.log(ooo.counter)
+ console.log(ooo.counter2)
+ })
 
 
+ setTimeout(()=>{
+ console.log('doing')
+ ooo.counter = 10
+ ooo.counter2 = 30
+ },100)
+ */
 
 
-//window.obs = obs;
+
+var state = replaceState ({
+  todos:todoStore
+})
 
 
 ReactDOM.render(
-    <Provider proxyoStores={todoStore}>
+    <Provider proxyoStores={state}>
       <TodoList/>
     </Provider>
-      ,
-      document.getElementById('app')
-  )
+    ,
+    document.getElementById('app')
+)
 
 

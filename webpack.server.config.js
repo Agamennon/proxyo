@@ -23,7 +23,7 @@ module.exports = [{
               "react"
 
             ],
-            plugins:["transform-class-properties"],
+            plugins:["transform-decorators-legacy","transform-class-properties",],
           }
         }],
         exclude: /node_modules/

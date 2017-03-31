@@ -1,27 +1,22 @@
 'use strict'
 
 const nextTick = require('./nextTick')
-const builtIns = require('./builtIns/index')
+const builtIns = require('./builtIns')
 const wellKnowSymbols = require('./wellKnownSymbols')
 
 const proxies = new WeakMap()
 const observers = new WeakMap()
 const queuedObservers = new Set()
-
 const enumerate = Symbol('enumerate')
 let queued = false
 let currentObserver
 const handlers = {get, ownKeys, set, deleteProperty}
 
-//gui
-var interceptMap = new Map()
-//end gui
-
 module.exports = {
+  proxies,
   observe,
   observable,
-  isObservable,
-  interceptMap
+  isObservable
 }
 
 function observe (fn, context, ...args) {
@@ -56,18 +51,14 @@ function observable (obj) {
     throw new TypeError('first argument must be an object or undefined')
   }
   return proxies.get(obj) || toObservable(obj)
-
 }
 
 function toObservable (obj) {
   let observable
-
-  const builtIn = builtIns.get(obj.constructor)//builtIns eh um mapa (get pega o valor com a chave obj.constructor)
-
-  //se o que for passado foi contruido com um contrutor do tipo function, como Map Set do proprio motor
+  const builtIn = builtIns.get(obj.constructor)
   if (typeof builtIn === 'function') {
     observable = builtIn(obj, registerObserver, queueObservers)
-  } else if (!builtIn) { //quando builtin eh diferente de function e contem valor????
+  } else if (!builtIn) {
     observable = new Proxy(obj, handlers)
   } else {
     observable = obj
@@ -85,68 +76,18 @@ function isObservable (obj) {
   return (proxies.get(obj) === obj)
 }
 
-
-
-
-
-
-
-
-
-
-/*
-
-function intercept(method, receiver ,key){
-  var interceptData = interceptMap.get(receiver);
-  var interceptResult;
-  if (interceptData){
-    if ((interceptData[0] === method) && (interceptData[1] === key || interceptData[1] === '')){
-      interceptResult = interceptData[2].apply(receiver,arguments)
-    }
-  }
-  return interceptResult
-}
-*/
-
-
-
-
 function get (target, key, receiver) {
   if (key === '$raw') return target
-
-/*  console.log("proxyo get key- ",key)
-  console.log("proxyo get target- ",target)
-  console.log("proxyo get receiver- ",receiver)*/
-//INTERCEPT
-  var interceptData = interceptMap.get(receiver);
-  var interceptResult;
-  if (interceptData) {
-    if ((interceptData[0] === 'get') && (interceptData[1] === key || interceptData[1] === '')) {
-      interceptResult = interceptData[2].apply(receiver, arguments)
-    }
-  }
-
-  let result
-
-  if (interceptResult){
-    result = interceptResult;
-  }  else{
-    result = Reflect.get(target, key, receiver)
-  }
-//END INTERCEPT
-
+  const result = Reflect.get(target, key, receiver)
   if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {
     return result
   }
-  const isObject = (typeof result === 'object' && result) //typeof object its object (arrays are condierd objects too) or null por isso check result
+  const isObject = (typeof result === 'object' && result)
+  let observable = isObject && proxies.get(result)
 
- let observable = isObject && proxies.get(result)
-
-  //another gui devolve observers sempre
   if (!observable && isObject){
     observable =  toObservable(result)
   }
- //
 
   if (currentObserver) {
     registerObserver(target, key)
@@ -154,68 +95,8 @@ function get (target, key, receiver) {
       return observable || toObservable(result)
     }
   }
-
-  //gui additions  captura metodos e da autobind apply neles
-  if (typeof result == 'function' && result.name !== 'valueOf' && result.name !== 'toString' && result.name !== 'Object'){
-    var origMethod = target[key];
-    return function(...args){
-      const res = origMethod.apply(receiver,args);
-      return res
-    }
-  }
-//end gui
   return observable || result
-
 }
-
-
-function set (target, key, value, receiver) {
-
-  //console.log('triggering Set at key',key)
-//  console.log('triggering Set at key',key)
-
-  var interceptData = interceptMap.get(receiver);
-  var interceptResult;
-  if (interceptData){
-    if ((interceptData[0] === 'set') && (interceptData[1] === key || interceptData[1] === '')){
-      interceptResult = interceptData[2].apply(receiver,arguments)
-    }
-  }
-
-
-    //value = interceptResult
-    //console.log('interceptResult',interceptResult)
-    //value = interceptResult
-    if (key === 'length' || value !== Reflect.get(target, key, receiver)) {
-      queueObservers(target, key)
-      queueObservers(target, enumerate)
-    }
-    if (typeof value === 'object' && value) {
-      value = value.$raw || value
-    }
-    //return Reflect.set(target, key, value, receiver)
-    //mudanca grava tudo como observer
-   // return target[key] = value
-   // return Reflect.set(target, key, (typeof value === 'object' && value) ? toObservable(value): value, receiver)
-    return Reflect.set(target, key, value, receiver)
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function registerObserver (target, key) {
   if (currentObserver) {
@@ -237,6 +118,16 @@ function ownKeys (target) {
   return Reflect.ownKeys(target)
 }
 
+function set (target, key, value, receiver) {
+  if (key === 'length' || value !== Reflect.get(target, key, receiver)) {
+    queueObservers(target, key)
+    queueObservers(target, enumerate)
+  }
+  if (typeof value === 'object' && value) {
+    value = value.$raw || value
+  }
+  return Reflect.set(target, key, value, receiver)
+}
 
 function deleteProperty (target, key) {
   if (Reflect.has(target, key)) {
@@ -281,4 +172,3 @@ function runObserver (observer) {
 function unobserveKey (observersForKey) {
   observersForKey.delete(this)
 }
-
