@@ -1,3 +1,4 @@
+
 'use strict'
 
 const nextTick = require('./nextTick')
@@ -21,6 +22,7 @@ module.exports = {
   reaction,
   observable,
   isObservable,
+  createObserver
 }
 
 function reaction (fn,context,cb,cbContext,...args) {
@@ -49,16 +51,22 @@ function observe (fn, context, ...args) {
   return createObserver(options)
 }
 
+
+
 function createObserver(options){
 
 
-  const {type,fn,context,cb,cbContext,args} = options
-  const observer = {type,fn,context,args,cb,cbContext, observedKeys: [], unobserve,exec,unqueue}
+  const {type,fn,context,cb,cbContext,args,dontRun} = options
+  const observer = {type,fn,context,args,cb,cbContext, observedKeys: [],runs:0, unobserve,exec,unqueue}
 
 
   /*if (typeof context === 'object'){
-    toObservable(context)
-  }*/
+   toObservable(context)
+   }*/
+  console.log('DONT RUN?',dontRun)
+  if (dontRun){
+    return observer
+  }
   runObserver(observer,true)
   return observer
 }
@@ -77,11 +85,28 @@ function observable (obj) {
 
 function toObservable (obj) {
   let observable
-  observable = new Proxy(obj, handlers)
+  const builtIn = builtIns.get(obj.constructor)
+  if (typeof builtIn === 'function') {
+    //console.log(builtIn)
+    observable = builtIn(obj, registerObserver, queueObserver)
+  } else if (!builtIn) {
+    observable = new Proxy(obj, handlers)
+  } else {
+    observable = obj
+  }
   proxies.set(obj, observable)
   proxies.set(observable, observable)
   observers.set(obj, new Map())
   return observable
+
+
+
+ /*  let observable
+   observable = new Proxy(obj, handlers)
+   proxies.set(obj, observable)
+   proxies.set(observable, observable)
+   observers.set(obj, new Map())
+   return observable*/
 }
 
 function isObservable (obj) {
@@ -94,15 +119,17 @@ function isObservable (obj) {
 
 
 function get (target, key, receiver) {
-//  console.log('TARGET --------------------------------->',target)
+  //console.log('GETTING ',key,target)
+
+
   if (key === '$raw') return target
 
 
-    if (key === 'toJSON') {
-      return function(){
-        return target
-      }
+  if (key === 'toJSON') {
+    return function(){
+      return target
     }
+  }
 
 
   var result = Reflect.get(target, key, receiver)
@@ -110,16 +137,14 @@ function get (target, key, receiver) {
   if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {   //NOT OBSERVE WELL KNOWN SIMBOLS
     return result
   }
-  if (key === '@@toStringTag'){
+ /* if (key === '@@toStringTag'){
     return result
-  }
+  }*/
 
-/*
-     if(!proxies.get(target)){
-       console.log('sadfllksdjflksdfjlsdkfjsldkfjlsdkfjsldkfjsdlkfjsdlkfjsdlkfsldjkfd')
-       toObservable(target)
-     }
-*/
+  /* if(!proxies.get(target)){
+   console.log('sadfllksdjflksdfjlsdkfjsldkfjlsdkfjsldkfjsdlkfjsdlkfjsdlkfsldjkfd')
+   toObservable(target)
+   }*/
 
 
 
@@ -162,19 +187,19 @@ function set (target, key, value, receiver) {
 
 function registerObserver (target, key) {
 
-  const observersForTarget = observers.get(target)  //volta um mapa que contem as chaves desse objeto
-  let observersForKey = observersForTarget.get(key)  //volta um set que contem os pares
-  if (!observersForKey) {
-    observersForKey = new Set()
-    observersForTarget.set(key, observersForKey)
-  }
-  if (!observersForKey.has(currentObserver)) {
-    observersForKey.add(currentObserver)
-    currentObserver.observedKeys.push(observersForKey)
+  if (currentObserver) {
+    const observersForTarget = observers.get(target)
+    let observersForKey = observersForTarget.get(key)
+    if (!observersForKey) {
+      observersForKey = new Set()
+      observersForTarget.set(key, observersForKey)
+    }
+    if (!observersForKey.has(currentObserver)) {
+      observersForKey.add(currentObserver)
+      currentObserver.observedKeys.push(observersForKey)
+    }
   }
 
- // currentObserver.observedKeys.push(observersForKey)
-  //observersForKey.add(currentObserver)
 }
 
 
@@ -186,8 +211,8 @@ function queueObserver (target,key) {
     })
   }
   if (!queued) {
-     nextTick(runObservers)
-     queued = true
+    nextTick(runObservers)
+    queued = true
   }
 }
 
@@ -201,31 +226,39 @@ function runObservers () {
 
 function runObserver (observer,firstRun) {
   try {
-  // if (firstRun){
-      currentObserver = observer
-   // }
+    // if (firstRun){
+    console.log('current observer ---->',currentObserver)
+
+    currentObserver = observer
+    
+    console.log('running observer',observer,firstRun)
+
     switch (observer.type){
-      case 'autorun':observer.fn.apply(observer.context, observer.args)
+      case 'autorun':
+        observer.fn.apply(observer.context, observer.args)
+        observer.runs ++
         break
       case 'reaction':
         if (firstRun){
           observer.fn.apply(observer.context, observer.args)
+          observer.runs ++
         } else {
           observer.cb.apply(observer.cbContext, observer.args)
+          observer.runs ++
         }
-         break
+        break
     }
   } finally {
-  //  if (firstRun){
-      currentObserver = undefined
-  //  }
+    //  if (firstRun){
+    currentObserver = undefined
+    //  }
   }
 }
 
 function ownKeys (target) {  //uses in for in loops and  enumerate is just a simbol to tag enumeration
-  if (currentObserver) {
+
     registerObserver(target, enumerate)
-  }
+
   return Reflect.ownKeys(target)
 }
 
@@ -254,8 +287,9 @@ function unobserve () {
   }
 }
 
-function exec () {
-  runObserver(this)
+function exec (firstRun) {
+  runObserver(this,firstRun)
 }
+
 
 

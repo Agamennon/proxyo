@@ -1,13 +1,72 @@
 //import {observer} from '../../src/index'
 import ReactDOM from 'react-dom'
 //import {store1} from './stores/store'
-import {observer,observable,observe,replaceState,computed,test,action,observerLight,computedMap,proxies} from '../../src/index'
+import {observer,observable,observe,replaceState,toObservable,computed,test,action,observerLight,computedMap,proxies} from '../../src/index'
 import React from 'react'
 
+/*
 import TodoList from './todo/TodoList'
 import {Provider} from '../../src/index'
 import todoStore from './todo/todoStore'
 //import todoViewModel from './todo/todoViewModal'
+*/
+
+
+
+@toObservable
+class testA {
+
+  items = []
+  addItem (value){
+    this.items.push(value)
+  }
+
+  @computed get evenItems () {
+       return this.items.filter((item,index)=>{
+       return ((index % 2) === 0)
+    })
+  }
+  constructor (){
+     this.addItem('even1')
+     this.addItem('odd1')
+     this.addItem('even2')
+     this.addItem('odd2')
+     this.addItem('even3')
+     this.addItem('odd3')
+  }
+}
+
+var obs = observer.observable(new testA());
+observer.observe(function(arg){
+   console.log('----------------------------------------------------->',obs.evenItems)
+})
+
+
+setTimeout(()=>{
+ // console.log(obs.evenItems)
+  obs.addItem('even4')
+},3000)
+
+
+//observer.observe
+
+/*
+
+
+var state = replaceState ({
+  todos:todoStore
+})
+
+
+ReactDOM.render(
+    <Provider proxyoStores={state}>
+      <TodoList/>
+    </Provider>
+    ,
+    document.getElementById('app')
+)
+
+*/
 
 
 /*
@@ -19,7 +78,7 @@ import todoStore from './todo/todoStore'
  return this.firstName + " " + this.lastName
  })
  })
- */
+*/
 
 /*var compu =  function(fn,context) {
  console.log(this)
@@ -177,20 +236,5 @@ console.log(JSON.stringify(user));
  ooo.counter2 = 30
  },100)
  */
-
-
-
-var state = replaceState ({
-  todos:todoStore
-})
-
-
-ReactDOM.render(
-    <Provider proxyoStores={state}>
-      <TodoList/>
-    </Provider>
-    ,
-    document.getElementById('app')
-)
 
 

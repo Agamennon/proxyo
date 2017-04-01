@@ -1,5 +1,7 @@
 import {observable, observe, action,isObservable,computed, state, toObservable} from '../../../src/index'
 
+
+
 class Todo {
   value
   id
@@ -15,24 +17,27 @@ class Todo {
 
 @toObservable
 class TodoStore {
-    todos = []
+    todos = observable([])
     filter = ""
     firstName = 'guilherme'
     lastName = 'guerchmann'
 
-    @computed get fullName (){
-      console.log('-----computing full name ---------')
+    get  fullName (){
+      console.log('computing name')
       return this.firstName + ' ' + this.lastName
     }
-    @computed get fullNameUpper (){
-     console.log('-----computing full name UPPER---------')
+    get fullNameUpper (){
      return (this.firstName + ' ' + this.lastName).toUpperCase()
     }
-    get filtredTodos (){
+   get filtredTodos (){
       var matchesFilter = new RegExp(this.filter,'i')
       return this.todos.filter(todo=> !this.filter || matchesFilter.test(todo.value))
     }
-     constructor(state){
+     teste (){
+     return 10
+    }
+     constructor(){
+
          this.todos.push(new Todo('abigail'))
          this.todos.push(new Todo('leonardo'))
     }

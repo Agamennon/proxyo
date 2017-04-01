@@ -90,7 +90,6 @@ const wellKnowSymbols = __webpack_require__(11)
 const proxies = new WeakMap()
 const observers = new WeakMap()
 const queuedObservers = new Set()
-const imediateObservers = new Set()
 const enumerate = Symbol('enumerate')
 
 
@@ -102,22 +101,52 @@ const handlers = {get, set, ownKeys, deleteProperty}
 module.exports = {
   proxies,
   observe,
+  reaction,
   observable,
   isObservable,
 }
 
+function reaction (fn,context,cb,cbContext,...args) {
+  const options = {
+    type:'reaction',
+    fn:fn,
+    context:context,
+    cb,
+    cbContext,
+    args:args.length ? args: undefined
+  }
+  return createObserver(options)
+}
+
 
 function observe (fn, context, ...args) {
-
   if (typeof fn !== 'function') {
     throw new TypeError('First argument must be a function')
   }
- // console.log('-------------------------------------------------------IMEDIATE',imediate)
-  args = args.length ? args : undefined
-  const observer = {fn, context, args, observedKeys: [],unobserve}
+  const options = {
+    type:'autorun',
+    fn:fn,
+    context:context,
+    args:args.length ? args: undefined
+  }
+  return createObserver(options)
+}
+
+function createObserver(options){
+
+
+  const {type,fn,context,cb,cbContext,args} = options
+  const observer = {type,fn,context,args,cb,cbContext, observedKeys: [], unobserve,exec,unqueue}
+
+
+  /*if (typeof context === 'object'){
+   toObservable(context)
+   }*/
   runObserver(observer,true)
   return observer
 }
+
+
 
 
 function observable (obj) {
@@ -130,12 +159,12 @@ function observable (obj) {
 }
 
 function toObservable (obj) {
- /* let observable
-  const builtIn = builtIns.get(obj.constructor)//builtIns eh um mapa (get pega o valor com a chave obj.constructor)
+  let observable
+  const builtIn = builtIns.get(obj.constructor)
   if (typeof builtIn === 'function') {
-    console.log('BINGO BINGO BINGO')
+    //console.log(builtIn)
     observable = builtIn(obj, registerObserver, queueObserver)
-  } else if (!builtIn) { //quando builtin eh diferente de function e contem valor????
+  } else if (!builtIn) {
     observable = new Proxy(obj, handlers)
   } else {
     observable = obj
@@ -143,14 +172,16 @@ function toObservable (obj) {
   proxies.set(obj, observable)
   proxies.set(observable, observable)
   observers.set(obj, new Map())
-  return observable*/
-
-  let observable
-  observable = new Proxy(obj, handlers)
-  proxies.set(obj, observable)
-  proxies.set(observable, observable)
-  observers.set(obj, new Map())
   return observable
+
+
+
+  /* let observable
+   observable = new Proxy(obj, handlers)
+   proxies.set(obj, observable)
+   proxies.set(observable, observable)
+   observers.set(obj, new Map())
+   return observable*/
 }
 
 function isObservable (obj) {
@@ -163,14 +194,34 @@ function isObservable (obj) {
 
 
 function get (target, key, receiver) {
+//  console.log('TARGET --------------------------------->',target)
   if (key === '$raw') return target
 
+
+  if (key === 'toJSON') {
+    return function(){
+      return target
+    }
+  }
+
+
   var result = Reflect.get(target, key, receiver)
-  console.log('getting', key, target)
 
   if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {   //NOT OBSERVE WELL KNOWN SIMBOLS
     return result
   }
+  if (key === '@@toStringTag'){
+    return result
+  }
+
+  /*
+   if(!proxies.get(target)){
+   console.log('sadfllksdjflksdfjlsdkfjsldkfjlsdkfjsldkfjsdlkfjsdlkfjsdlkfsldjkfd')
+   toObservable(target)
+   }
+   */
+
+
 
   const isObject = (typeof result === 'object' && result) //typeof object its object (arrays are condierd objects too) or null por isso check result
   let observable = isObject && proxies.get(result)
@@ -180,7 +231,7 @@ function get (target, key, receiver) {
   }
 
   if (currentObserver) {
-  //  console.log('currentObserver set')
+
     registerObserver(target, key)
     if (isObject) {
       return observable || toObservable(result)
@@ -194,11 +245,11 @@ function get (target, key, receiver) {
 
 function set (target, key, value, receiver) {
 
-  console.log('setting' ,key, target , value)
+
   if (key === 'length' || value !== Reflect.get(target, key, receiver)) { //lenght to observe changes in arrays
 
 //  if (value !== Reflect.get(target, key, receiver)) {
-    console.log('setting introspect',key,value,target)
+
     queueObserver(target, key)
     queueObserver(target, enumerate)
   }
@@ -210,80 +261,70 @@ function set (target, key, value, receiver) {
 }
 
 function registerObserver (target, key) {
-  console.log('regestring',key,target)
-  const observersForTarget = observers.get(target)  //volta um mapa que contem as chaves desse objeto
-  let observersForKey = observersForTarget.get(key)  //volta um set que contem os pares
-  if (!observersForKey) {
-    observersForKey = new Set()
-    observersForTarget.set(key, observersForKey)
-    console.log('seting new observer for target ',key,observersForKey)
-  }
-  if (!observersForKey.has(currentObserver)) {
-    observersForKey.add(currentObserver)
-    currentObserver.observedKeys.push(observersForKey)
+
+  if (currentObserver) {
+    const observersForTarget = observers.get(target)
+    let observersForKey = observersForTarget.get(key)
+    if (!observersForKey) {
+      observersForKey = new Set()
+      observersForTarget.set(key, observersForKey)
+    }
+    if (!observersForKey.has(currentObserver)) {
+      observersForKey.add(currentObserver)
+      currentObserver.observedKeys.push(observersForKey)
+    }
   }
 
- // currentObserver.observedKeys.push(observersForKey)
-  //observersForKey.add(currentObserver)
 }
 
 
 function queueObserver (target,key) {
-  console.log('queueObserver for',key,target)
   const observersForKey = observers.get(target).get(key)
   if (observersForKey) {
- //   console.log('observer for key found!',key)
     observersForKey.forEach((observer)=>{
-      //imediateObservers.add()
-    //  if (!observer.imediate){
-        queuedObservers.add(observer)
-  //    } else {
-     //   console.log('running imediate')
-       // imediateObservers.add(observer)
-    //    runObserver(observer)
-  //    }
-
-
+      queuedObservers.add(observer)
     })
   }
-
-
   if (!queued) {
-
-     nextTick(runObservers)
-     queued = true
+    nextTick(runObservers)
+    queued = true
   }
 }
 
 function runObservers () {
-  queuedObservers.forEach(runObserver)
+  queuedObservers.forEach((observer)=>{
+    runObserver(observer)
+  })
   queuedObservers.clear()
   queued = false
 }
 
 function runObserver (observer,firstRun) {
-  console.log('runObserver',observer)
   try {
-  // if (firstRun){
-      currentObserver = observer
-   // }
-     observer.fn.apply(observer.context, observer.args)
+    // if (firstRun){
+    currentObserver = observer
+    // }
+    switch (observer.type){
+      case 'autorun':observer.fn.apply(observer.context, observer.args)
+        break
+      case 'reaction':
+        if (firstRun){
+          observer.fn.apply(observer.context, observer.args)
+        } else {
+          observer.cb.apply(observer.cbContext, observer.args)
+        }
+        break
+    }
   } finally {
-  //  if (firstRun){
-      currentObserver = undefined
-  //  }
-
-
+    //  if (firstRun){
+    currentObserver = undefined
+    //  }
   }
-
 }
 
 function ownKeys (target) {  //uses in for in loops and  enumerate is just a simbol to tag enumeration
   if (currentObserver) {
-    console.log ('-------------- target ownKeys', target)
     registerObserver(target, enumerate)
-  } else {
-    console.log (' ELSE------------------ target ownKeys', target)
   }
   return Reflect.ownKeys(target)
 }
@@ -291,6 +332,18 @@ function ownKeys (target) {  //uses in for in loops and  enumerate is just a sim
 
 function unobserveKey (observersForKey) {
   observersForKey.delete(this)
+}
+
+function unqueue () {
+  queuedObservers.delete(this)
+}
+
+function deleteProperty (target, key) {
+  if (Reflect.has(target, key)) {
+    queueObserver(target, key)
+    queueObserver(target, enumerate)
+  }
+  return Reflect.deleteProperty(target, key)
 }
 
 function unobserve () {
@@ -301,12 +354,8 @@ function unobserve () {
   }
 }
 
-function deleteProperty (target, key) {
-  if (Reflect.has(target, key)) {
-    queueObserver(target, key)
-    queueObserver(target, enumerate)
-  }
-  return Reflect.deleteProperty(target, key)
+function exec () {
+  runObserver(this)
 }
 
 
@@ -555,7 +604,7 @@ module.exports = Provider
 var observable = __webpack_require__(0).observable
 var observer = __webpack_require__(0)
 
-var computedResult = new Set();
+var computedMap = {};
 
 var intercept = function(target,method,property,interceptor){
   interceptMap.set(target,[method,property,interceptor])
@@ -589,90 +638,59 @@ function action (...params){
 }
 
 
-function computed (...params){
+function toObservable(target){
 
-  console.log(params)
+  return class extends target {
+    constructor(...args) {
+      var proxyoTEMP = target.prototype.__proxyoTEMP
+      delete target.prototype.__proxyoTEMP
+      var computedResults = {}
+      if (proxyoTEMP && proxyoTEMP.computed){
+        proxyoTEMP.computed.forEach((item)=>{
+          Object.defineProperty(target.prototype, item.key, {
+            enumerable: false,
+            configurable: true,
+            get: function(){
+              return computedResults[item.key]
+            }
+          });
+        })
+      }
+      super();
 
-  var target = params[0]
-  var key = params[1]
-  var descriptor = params[2]
+      var thisObs = observable(this);
+      function computedWraper(item){
 
-  var originalGet = descriptor.get
-  var result
+        computedResults[item.key] = item.get.call(this)
+      }
+      if (proxyoTEMP && proxyoTEMP.computed){
+        proxyoTEMP.computed.forEach((item)=>{
 
-  var wraper = function () {
-    console.log('inside wrapper')
-    result = originalGet.apply(this)
-    console.log('wrapper result ===============',result)
-  }
-  var signal = null
-
-  descriptor.get = function(){
-    console.log('inside get ')
-
-    if (!signal){
-      console.log(this)
-      //var ctx = observer.proxies.get(this)
-      console.log('NO SIGNAL')
-      //wraper.apply(this,arguments)
-    //  Promise.resolve().then(()=>{
-
-      signal = observer.observe(wraper,this)
-   //   })
-     /* setTimeout(()=>{
-        signal = observer.observe(wraper,this,arguments)
-      },0)*/
-
-
-      console.log(result)
+          observer.observe(computedWraper,thisObs,item)
+        })
+      }
     }
-    console.log('RESSSSSSSSSSSSULT',result)
-    return result
   }
 
-  //descriptor.get.bind(target)
 
-
-
-
-
-  /*var originalFn
-   var fn = function(...args){
-   var context = observer.proxies.get(this)
-   originalFn.apply(context||this,arguments)
-   }
-
-   var wraper = function (target,key,descriptor) {
-   originalFn = descriptor.value
-   descriptor.value = fn
-   }
-   //determinar o estilo usado @anotation ou function() se userFn existe eh function senao vai ser uma anotation
-   var userFn = (typeof params[0] === 'function') ? params[0] : null
-   if (!userFn){
-   userFn = ((typeof params[0] === 'string') && (typeof params[1] === 'function')) ? params[1] : null
-   }
-   if (userFn) {    //fazer o certo para functions()
-   originalFn = userFn
-   return fn;
-   }
-   else { //fazer o certo para actions
-   return (typeof params[0] === 'object') ? wraper(...params) : wraper
-   }*/
 
 }
 
-
-/*
- function Action(name,fn){
- return function(...args){
- var context = observer.proxies.get(this)
- return fn.apply(context||this,arguments)
- }
- }
- */
+function computed (target, key , descriptor) {
+  var proxyoTEMP = target.constructor.prototype.__proxyoTEMP
+  if (!proxyoTEMP){
+    proxyoTEMP = target.constructor.prototype.__proxyoTEMP = {
+      computed:[]
+    }
+  }
+  proxyoTEMP.computed.push({
+    key:key,
+    get:descriptor.get,
+    set:descriptor.set
+  })
+}
 
 var state = observable({})
-
 var replaceState = (userState)=> {
   Object.keys(state).map((key)=>{
     delete state[key]
@@ -687,7 +705,9 @@ module.exports = {
   intercept,
   computed,
   replaceState,
+  toObservable,
   state,
+  computedMap,
   action
 }
 
@@ -988,6 +1008,7 @@ for (let key of Object.getOwnPropertyNames(Symbol)) {
   if (typeof value === 'symbol') {
     wellKnowSymbols.add(value)
   }
+
 }
 
 module.exports = wellKnowSymbols
@@ -1125,7 +1146,6 @@ import {CreateState,globalState, globalActions}  from './proxyo/createState'
 export {CreateState,globalState,
   globalActions,observer}
 */
-
 /*
 var observer = require('./observer/observer');
 var observerLight = require('./observer/observerLight');
@@ -1136,12 +1156,15 @@ var proxyo = __webpack_require__(4);
 
 
 module.exports = {
+  observer:observer,
   observe:observer.observe,
   observable:observer.observable,
-  observerLight:observerLight,
   isObservable:observer.isObservable,
-  observer:observer,
+  proxies:observer.proxies,
+  toObservable:proxyo.toObservable,
   action:proxyo.action,
+  proxyo:proxyo,
+  computedMap:proxyo.computedMap,
   computed:proxyo.computed,
   replaceState:proxyo.replaceState,
   state:proxyo.state,

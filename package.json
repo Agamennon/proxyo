@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "Observable Proxy Framework",
   "main": "dist/proxyo.js",
-  "scripts": {},
+  "scripts": {
+    "test": "mocha-webpack --webpack-config webpack.test.config.js \"test/**/*.test.js\""
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Agamennon/proxyo.git"
@@ -38,11 +40,14 @@
     "chai": "3.5.0",
     "express": "^4.15.2",
     "mocha": "2.5.3",
+    "mocha-webpack": "^0.7.0",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "webpack": "^2.2.1",
     "webpack-dev-middleware": "^1.10.1",
-    "webpack-hot-middleware": "^2.17.1"
+    "webpack-hot-middleware": "^2.17.1",
+    "webpack-node-externals": "^1.5.4",
+    "webpack-shell-plugin": "^0.5.0"
   },
   "engines": {
     "node": ">=6.0.0"

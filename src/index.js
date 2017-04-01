@@ -18,6 +18,7 @@ module.exports = {
   observer:observer,
   observe:observer.observe,
   observable:observer.observable,
+  createObserver:observer.createObserver,
   isObservable:observer.isObservable,
   proxies:observer.proxies,
   toObservable:proxyo.toObservable,

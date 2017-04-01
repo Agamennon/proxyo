@@ -1,13 +1,16 @@
-/*var observable = require('../observer/observer').observable
- var interceptMap = require('../observer/observer').interceptMap
- var observer = require('../observer/observer')*/
+'use strict'
+
+/*
+var observable = require('../observer/observer').observable
+var interceptMap = require('../observer/observer').interceptMap
+ var observer = require('../observer/observer')**/
 var observable = require('../observer/observerLight').observable
 var observer = require('../observer/observerLight')
 
 var computedMap = {};
 
 var intercept = function(target,method,property,interceptor){
-  interceptMap.set(target,[method,property,interceptor])
+//  interceptMap.set(target,[method,property,interceptor])
 }
 
 function action (...params){
@@ -44,27 +47,54 @@ function toObservable(target){
     constructor(...args) {
       var proxyoTEMP = target.prototype.__proxyoTEMP
       delete target.prototype.__proxyoTEMP
+      super(args);
       var computedResults = {}
+
       if (proxyoTEMP && proxyoTEMP.computed){
         proxyoTEMP.computed.forEach((item)=>{
           Object.defineProperty(target.prototype, item.key, {
             enumerable: false,
             configurable: true,
             get: function(){
-              return computedResults[item.key]
+              console.log('someone got ',item)
+              if (item.observer.runs === 0){
+                 item.observer.exec(true)
+              }
+              return item.computedResult
+              //return computedResults[item.key].result
+
             }
           });
         })
       }
-      super();
+
 
       var thisObs = observable(this);
       function computedWraper(item){
-        computedResults[item.key] = item.get.call(this)
+        console.log('computing',item)
+   //     computedResults[item.key] = item.get.call(this)
+        //computedResults[item.key].firstTime = !computedResults[item.key].firstTime
+        if (item.type === 'getter'){
+
+          item.computedResult = item.get.call(this)
+        }
+        if (item.type === 'function'){
+          item.computedResult = item.value.call(this)
+        }
+
       }
       if (proxyoTEMP && proxyoTEMP.computed){
         proxyoTEMP.computed.forEach((item)=>{
-          observer.observe(computedWraper,thisObs,item)
+
+          //shedule on first observe
+          // observer.observe(computedWraper,thisObs,item)
+
+          //computedResults[item.key] =  observer.observe(computedWraper,thisObs,item)
+          //const {type,fn,context,cb,cbContext,args,dontRun} = options
+          item.computedResult = undefined;
+          item.observer = observer.createObserver({type:'autorun',fn:computedWraper,context:thisObs,args:[item],dontRun:true})
+
+//          computedResults[item.key] =  {observer:observerSignal,result:undefined}
         })
       }
     }
@@ -75,17 +105,22 @@ function toObservable(target){
 }
 
 function computed (target, key , descriptor) {
+
   var proxyoTEMP = target.constructor.prototype.__proxyoTEMP
   if (!proxyoTEMP){
     proxyoTEMP = target.constructor.prototype.__proxyoTEMP = {
       computed:[]
     }
   }
-  proxyoTEMP.computed.push({
+  var tmp = {
+    type: typeof descriptor.value === 'function' ? 'function' : 'getter',
     key:key,
     get:descriptor.get,
-    set:descriptor.set
-  })
+    set:descriptor.set,
+    value:descriptor.value
+  }
+  proxyoTEMP.computed.push(tmp)
+
 }
 
 var state = observable({})
@@ -108,3 +143,4 @@ module.exports = {
   computedMap,
   action
 }
+
