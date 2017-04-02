@@ -4,14 +4,13 @@ import ReactDOM from 'react-dom'
 import {observer,observable,observe,replaceState,toObservable,computed,test,action,observerLight,computedMap,proxies} from '../../src/index'
 import React from 'react'
 
-/*
 import TodoList from './todo/TodoList'
 import {Provider} from '../../src/index'
 import todoStore from './todo/todoStore'
 //import todoViewModel from './todo/todoViewModal'
-*/
 
 
+/*
 
 @toObservable
 class testA {
@@ -20,37 +19,43 @@ class testA {
   addItem (value){
     this.items.push(value)
   }
+  firstName = 'guilherme'
+  lastName = 'guerchmann'
 
-  @computed get evenItems () {
+  @computed get  fullName (){
+    console.log('computing name')
+    return this.firstName + ' ' + this.lastName
+  }
+  get evenItems () {
        return this.items.filter((item,index)=>{
-       return ((index % 2) === 0)
+         return true
+       //return ((index % 2) === 0)
     })
   }
   constructor (){
-     this.addItem('even1')
-     this.addItem('odd1')
-     this.addItem('even2')
-     this.addItem('odd2')
-     this.addItem('even3')
-     this.addItem('odd3')
+     this.addItem('23231')
+     this.addItem('333333')
+
   }
 }
 
 var obs = observer.observable(new testA());
 observer.observe(function(arg){
-   console.log('----------------------------------------------------->',obs.evenItems)
+   console.log('----------------------------------------------------->',obs.firstName)
+   console.log('----------------------------------------------------->',obs.fullName)
+ //  console.log('----------------------------------------------------->',obs.evenItems)
 })
 
 
 setTimeout(()=>{
- // console.log(obs.evenItems)
-  obs.addItem('even4')
+
+ // obs.addItem('asdfasd')
+//  obs.addItem('odaaaaad4')
+  obs.firstName = 'lego'
 },3000)
+*/
 
 
-//observer.observe
-
-/*
 
 
 var state = replaceState ({
@@ -66,10 +71,9 @@ ReactDOM.render(
     document.getElementById('app')
 )
 
-*/
-
 
 /*
+
  const user = observable({
  firstName: "Michel",
  lastName: "Weststrate",

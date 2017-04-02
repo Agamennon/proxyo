@@ -92,7 +92,7 @@ function toObservable(target){
           //computedResults[item.key] =  observer.observe(computedWraper,thisObs,item)
           //const {type,fn,context,cb,cbContext,args,dontRun} = options
           item.computedResult = undefined;
-          item.observer = observer.createObserver({type:'autorun',fn:computedWraper,context:thisObs,args:[item],dontRun:true})
+          item.observer = observer.createObserver({type:'autorun',metaData:'computed',fn:computedWraper,context:thisObs,args:[item],dontRun:true})
 
 //          computedResults[item.key] =  {observer:observerSignal,result:undefined}
         })

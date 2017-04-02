@@ -12,7 +12,7 @@ const enumerate = Symbol('enumerate')
 
 
 let queued = false
-let currentObserver
+let currentObservers = []
 
 const handlers = {get, set, ownKeys, deleteProperty}
 
@@ -56,8 +56,8 @@ function observe (fn, context, ...args) {
 function createObserver(options){
 
 
-  const {type,fn,context,cb,cbContext,args,dontRun} = options
-  const observer = {type,fn,context,args,cb,cbContext, observedKeys: [],runs:0, unobserve,exec,unqueue}
+  const {type,fn,context,cb,cbContext,args,dontRun,metaData} = options
+  const observer = {type,fn,context,args,cb,cbContext,metaData,observedKeys: [],runs:0, unobserve,exec,unqueue}
 
 
   /*if (typeof context === 'object'){
@@ -119,7 +119,7 @@ function isObservable (obj) {
 
 
 function get (target, key, receiver) {
-  //console.log('GETTING ',key,target)
+  console.log('GETTING ',key,target)
 
 
   if (key === '$raw') return target
@@ -155,7 +155,7 @@ function get (target, key, receiver) {
     observable =  toObservable(result)
   }
 
-  if (currentObserver) {
+  if (currentObservers.length > 0) {
 
     registerObserver(target, key)
     if (isObject) {
@@ -174,7 +174,7 @@ function set (target, key, value, receiver) {
   if (key === 'length' || value !== Reflect.get(target, key, receiver)) { //lenght to observe changes in arrays
 
 //  if (value !== Reflect.get(target, key, receiver)) {
-
+    console.log('QueueObserver',target,key)
     queueObserver(target, key)
     queueObserver(target, enumerate)
   }
@@ -187,17 +187,23 @@ function set (target, key, value, receiver) {
 
 function registerObserver (target, key) {
 
-  if (currentObserver) {
+  if (currentObservers.length > 0) {
     const observersForTarget = observers.get(target)
     let observersForKey = observersForTarget.get(key)
-    if (!observersForKey) {
-      observersForKey = new Set()
-      observersForTarget.set(key, observersForKey)
-    }
-    if (!observersForKey.has(currentObserver)) {
-      observersForKey.add(currentObserver)
-      currentObserver.observedKeys.push(observersForKey)
-    }
+
+    currentObservers.forEach((currentObserver)=>{
+      if (!observersForKey) {
+        observersForKey = new Set()
+        observersForTarget.set(key, observersForKey)
+      }
+
+
+      if (!observersForKey.has(currentObserver)) {
+        observersForKey.add(currentObserver)
+       // console.log('observersForKey',observersForKey)
+        currentObserver.observedKeys.push(observersForKey)
+      }
+    })
   }
 
 }
@@ -217,9 +223,32 @@ function queueObserver (target,key) {
 }
 
 function runObservers () {
+  //reorder queuedobservers
+  var computedObservers = new Set()
+  var otherObservers = new Set()
+  console.log(queuedObservers)
   queuedObservers.forEach((observer)=>{
+    console.log(observer)
+    if (observer.metaData === 'computed'){
+
+      computedObservers.add(observer);
+    } else {
+      otherObservers.add(observer);
+    }
+  })
+
+  Array.from(computedObservers.values()).reverse().forEach((observer)=>{
     runObserver(observer)
   })
+
+  Array.from(otherObservers.values()).forEach((observer)=>{
+    runObserver(observer)
+  })
+
+/*  queuedObservers.forEach((observer)=>{
+    runObserver(observer)
+  })*/
+
   queuedObservers.clear()
   queued = false
 }
@@ -227,10 +256,10 @@ function runObservers () {
 function runObserver (observer,firstRun) {
   try {
     // if (firstRun){
-    console.log('current observer ---->',currentObserver)
 
-    currentObserver = observer
-    
+
+    currentObservers.unshift(observer)
+
     console.log('running observer',observer,firstRun)
 
     switch (observer.type){
@@ -250,8 +279,10 @@ function runObserver (observer,firstRun) {
     }
   } finally {
     //  if (firstRun){
-    currentObserver = undefined
+    console.log('current observer ---->',currentObservers)
+    currentObservers.shift()
     //  }
+
   }
 }
 
