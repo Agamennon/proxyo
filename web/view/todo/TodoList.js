@@ -88,7 +88,7 @@ export default class TodoList extends React.Component {
 
   render(){
     console.log('render todo List')
-    const {filter,filtredTodos,firstName,fullName,lastName,teste,fullNameUpper} = this.props.todos;
+    const {filter,filtredTodos,firstName,fullName,lastName,teste,fullNameUpper, someData} = this.props.todos;
     const todoList = filtredTodos.map((todo,index) => {
 
       return (
@@ -107,6 +107,7 @@ export default class TodoList extends React.Component {
     //   console.log(todoList);
     return (
         <div>
+          <h1>someData = {someData}</h1>
           <h1>teste = {teste}</h1>
           <h1>todos first name = {firstName}</h1>
           <h1>todos fullname = {fullName}</h1>

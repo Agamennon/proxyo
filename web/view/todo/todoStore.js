@@ -31,6 +31,7 @@ import {observable, observe, action,isObservable,computed, state, toObservable} 
 
 
 
+
 class Todo {
   value
   id
@@ -50,7 +51,21 @@ class TodoStore {
   filter = ""
   firstName = 'guilherme'
   lastName = 'guerchmann'
+  _someData = null
 
+  fetchSome (){
+    console.log('fetching some data')
+    setTimeout(()=>{
+      this._someData = 'here is your data'
+    },2000)
+  }
+
+  @computed get someData(){
+    if (this._someData === null){
+        this.fetchSome();
+    }
+    return this._someData
+  }
   @computed get  fullName (){
     return this.firstName + ' ' + this.lastName
   }

@@ -7,8 +7,7 @@
 var observable = require('../observer/observerLight').observable
 var observer = require('../observer/observerLight')
 var queueObservers = require ('../observer/observerLight').queueObservers
-
-var computedMap = {};
+var computedMap = observer.computedMap
 
 var intercept = function(target,method,property,interceptor){
 //  interceptMap.set(target,[method,property,interceptor])
@@ -51,18 +50,39 @@ function toObservable(target){
       super(args);
       var computedResults = {}
 
+
       if (proxyoTEMP && proxyoTEMP.computed){
         proxyoTEMP.computed.forEach((item)=>{
+          var targetSet = computedMap.get(item.key)
+          if (!targetSet){
+            targetSet = new Set().add(this)
+            computedMap.set(item.key,targetSet)
+
+          } else{
+            targetSet.add(this)
+          }
+
+
+          delete target.prototype[item.key]
           Object.defineProperty(target.prototype, item.key, {
             enumerable: false,
             configurable: true,
             get: function(){
+
 
               if (item.observer.runs === 0){
                 item.observer.exec(true)
               }
               return item.computedResult
               //return computedResults[item.key].result
+            },
+            set: function(val){
+
+          //    console.log('wtf')
+             // item.observer.metaData = 'discard'
+              item.set.call(this,val)
+             // setting = false
+           //   item.set('huma turman')
             }
           });
         })
@@ -71,16 +91,18 @@ function toObservable(target){
       var thisObs = observable(this);
 
       function computedWraper(item){
-
         console.log('computing ->',item.key)
+
         if (item.type === 'getter'){
-          item.computedResult = item.get.call(this)
+           //Promise.resolve().then(()=>{
+             item.computedResult = item.get.call(this)
+          //})
         }
         if (item.type === 'function'){
           item.computedResult = item.value.call(this)
         }
         if (item.observer.runs > 0){
-          queueObservers(this.$raw,item.key,true)
+            queueObservers(this.$raw,item.key,true)
         }
 
     //   Promise.resolve().then(()=>{queueObserver(this.$raw,item.key)})
@@ -90,7 +112,7 @@ function toObservable(target){
         proxyoTEMP.computed.forEach((item)=>{
           item.computedResult = undefined;
           item.observer = observer.createObserver({type:'autorun',metaData:'computed',fn:computedWraper,context:thisObs,args:[item],dontRun:true})
-         // item.observer.exec(true)
+          //item.observer.exec(true)
         })
       }
     }
@@ -108,6 +130,7 @@ function computed (target, key , descriptor) {
       computed:[]
     }
   }
+
   var tmp = {
     type: typeof descriptor.value === 'function' ? 'function' : 'getter',
     key:key,
@@ -136,7 +159,6 @@ module.exports = {
   replaceState,
   toObservable,
   state,
-  computedMap,
   action
 }
 

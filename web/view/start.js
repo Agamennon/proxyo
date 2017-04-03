@@ -3,42 +3,41 @@ import ReactDOM from 'react-dom'
 //import {store1} from './stores/store'
 import {observer,observable,observe,replaceState,toObservable,computed,test,action,observerLight,computedMap,proxies} from '../../src/index'
 import React from 'react'
-/*
-import TodoList from './todo/TodoList'
-import {Provider} from '../../src/index'
-import todoStore from './todo/todoStore'
-//import todoViewModel from './todo/todoViewModal'*/
+ import TodoList from './todo/TodoList'
+ import {Provider} from '../../src/index'
+ import todoStore from './todo/todoStore'
+ //import todoViewModel from './todo/todoViewModal'
 
 
 /*  const observable1 = observer.observable({prop: 'value1'})
-  const observable2 = observer.observable({prop: 'value2'})
+ const observable2 = observer.observable({prop: 'value2'})
 
-  let numOfRuns1 = 0
-  let numOfRuns2 = 0
-  function test1 () {
-    observable1.prop = observable2.prop
-    numOfRuns1++
-  }
-  function test2 () {
-    observable2.prop = observable1.prop
-    numOfRuns2++
-  }
-  observer.observe(test1)
-  //setTimeout(()=>{
-  observer.observe(test2)
-  //},3000)
+ let numOfRuns1 = 0
+ let numOfRuns2 = 0
+ function test1 () {
+ observable1.prop = observable2.prop
+ numOfRuns1++
+ }
+ function test2 () {
+ observable2.prop = observable1.prop
+ numOfRuns2++
+ }
+ observer.observe(test1)
+ //setTimeout(()=>{
+ observer.observe(test2)
+ //},3000)
 
-  //Promise.resolve().then(()=>{})
+ //Promise.resolve().then(()=>{})
 
-  Promise.resolve()
-      .then(() => observable1.prop = 'Hello')
-      .then(() => console.log('Hello =',observable2.prop))
-      .then(() => observable2.prop = 'World!')
-      .then(() => console.log('World! = ',observable1.prop))
-      .then(() => {
-         console.log('3 = ',numOfRuns1)
-         console.log('3 = ',numOfRuns2)
-      })*/
+ Promise.resolve()
+ .then(() => observable1.prop = 'Hello')
+ .then(() => console.log('Hello =',observable2.prop))
+ .then(() => observable2.prop = 'World!')
+ .then(() => console.log('World! = ',observable1.prop))
+ .then(() => {
+ console.log('3 = ',numOfRuns1)
+ console.log('3 = ',numOfRuns2)
+ })*/
 
 
 
@@ -47,48 +46,49 @@ import todoStore from './todo/todoStore'
 
 /*
 
-var o =  {
-  a:10,
-  get doubleA (){
-    return a*2
-  }
-}
+ var o =  {
+ a:10,
+ get doubleA (){
+ return a*2
+ }
+ }
 
-var temp = 1
+ var temp = 1
 
-Object.defineProperty(o,'a',{
-  enumerable: true,
-  configurable: true,
-  value:(function(){
-     return (temp * 100)
+ Object.defineProperty(o,'a',{
+ enumerable: true,
+ configurable: true,
+ value:(function(){
+ return (temp * 100)
 
-  }()),
-  writable:true,
-  metadata:'hahahah'
+ }()),
+ writable:true,
+ metadata:'hahahah'
 
-})
+ })
 
-var p = new Proxy(o,{
-  get:function(target, key, receiver){
-     console.log('get',key,target)
-     return Reflect.get(target,key)
-  },
-  set:function(target,key, value, receiver){
-     console.log('set',key,value)
-    console.log(Object.getOwnPropertyDescriptor(target,key))
-    return Reflect.set(target, key, value, receiver)
-  }
-})
+ var p = new Proxy(o,{
+ get:function(target, key, receiver){
+ console.log('get',key,target)
+ return Reflect.get(target,key)
+ },
+ set:function(target,key, value, receiver){
+ console.log('set',key,value)
+ console.log(Object.getOwnPropertyDescriptor(target,key))
+ return Reflect.set(target, key, value, receiver)
+ }
+ })
 
-console.log(p.a)
-p.a = 40
-console.log(p.b)
-console.log(o.b)
-*/
-
-
+ console.log(p.a)
+ p.a = 40
+ console.log(p.b)
+ console.log(o.b)
+ */
 
 
+
+
+/*
 
 @toObservable
 class testA {
@@ -100,22 +100,30 @@ class testA {
   firstName = 'guilherme'
   lastName = 'guerchmann'
 
-   get  fullName (){
+  @computed get  fullName (){
 
     return this.firstName + ' ' + this.lastName
   }
-   get fullNameUpper(){
+  @computed set fullName (val){
+    this.firstName = val
+  }
+
+/!*  @computed  get fullNameUpper(){
     return this.fullName.toUpperCase()
   }
-    get evenItems () {
-       return this.items.filter((item,index)=>{
-         return true
-       //return ((index % 2) === 0)
-    })
+  @computed moreName (){
+    return this.firstName + 'moreName'
   }
+  @computed  get evenItems () {
+    return this.items.filter((item,index)=>{
+      return true
+      //return ((index % 2) === 0)
+    })
+  }*!/
   constructor (){
-     this.addItem('23231')
-     this.addItem('333333')
+    this.addItem('23231')
+    this.addItem('333333')
+
 
   }
 }
@@ -123,10 +131,13 @@ class testA {
 var obs = observer.observable(new testA());
 observer.observe(function(arg){
 
+  obs.fullName = 'hahahaha'
+  //obs.firstName = 'gogogogo'
 
-  console.log('----------------------------------------------------->',obs.fullName)
- // console.log('----------------------------------------------------->',obs.fullNameUpper)
+//  console.log('----------------------------------------------------->',obs.fullName)
+  // console.log('----------------------------------------------------->',obs.fullNameUpper)
   console.log('----------------------------------------------------->',obs.firstName)
+  console.log('----------------------------------------------------->',obs.fullName)
 
   // console.log('----------------------------------------------------->',obs.evenItems)
 })
@@ -134,32 +145,31 @@ observer.observe(function(arg){
 
 setTimeout(()=>{
 
- // obs.addItem('asdfasd')
- // obs.addItem('odaaaaad4')
- // console.log('doing timeout')
-  obs.firstName = 'lego'
- // obs.lastName = 'goncalves'
+  // obs.addItem('asdfasd')
+  // obs.addItem('odaaaaad4')
+  // console.log('doing timeout')
+  obs.lastName = 'lego'
+  // obs.lastName = 'goncalves'
 },3000)
 
 
-
-
-
-/*
-
-var state = replaceState ({
-  todos:todoStore
-})
-
-
-ReactDOM.render(
-    <Provider proxyoStores={state}>
-      <TodoList/>
-    </Provider>
-    ,
-    document.getElementById('app')
-)
 */
+
+
+
+
+ var state = replaceState ({
+ todos:todoStore
+ })
+
+
+ ReactDOM.render(
+ <Provider proxyoStores={state}>
+ <TodoList/>
+ </Provider>
+ ,
+ document.getElementById('app')
+ )
 
 
 
@@ -184,7 +194,7 @@ ReactDOM.render(
  return this.firstName + " " + this.lastName
  })
  })
-*/
+ */
 
 /*var compu =  function(fn,context) {
  console.log(this)
@@ -196,66 +206,66 @@ ReactDOM.render(
  return obj
  }*/
 /*
-function wrap(obj){
-    // obj.fullName2.bind(compu)
-  Reflect.ownKeys(obj).forEach((key)=>{
-      console.log(obj[key])
-      var descriptor = (Reflect.getOwnPropertyDescriptor(obj, key))
-      if (Array.isArray(descriptor.value)){
-        if (descriptor.value[0] === 'proxyo_computed'){
-          descriptor.value = descriptor.value[1].call(obj)
-          Reflect.defineProperty(obj,key,descriptor)
+ function wrap(obj){
+ // obj.fullName2.bind(compu)
+ Reflect.ownKeys(obj).forEach((key)=>{
+ console.log(obj[key])
+ var descriptor = (Reflect.getOwnPropertyDescriptor(obj, key))
+ if (Array.isArray(descriptor.value)){
+ if (descriptor.value[0] === 'proxyo_computed'){
+ descriptor.value = descriptor.value[1].call(obj)
+ Reflect.defineProperty(obj,key,descriptor)
 
-        }
-      }
+ }
+ }
 
-    })
+ })
 
-    return obj
-  }
+ return obj
+ }
 
-function compu (fn) {
-    return ['proxyo_computed',fn]
-  }
-
-
-
-var user = {
-   firstName: "Michel",
-    lastName: "Weststrate",
-    get fullName2 (){
-
-      return this.firstName + " " + this.lastName
-    },
-    fullname3 :function(){
-
-      return 'ha'
-    }(),
-    fullName: compu(function(){
-
-      //return this.firstName + " " + this.lastName
-    })
-  }
+ function compu (fn) {
+ return ['proxyo_computed',fn]
+ }
 
 
 
-console.log(user.fullname3);
-console.log(user.fullname3);
-console.log(user.fullname3);
-console.log(user.fullname3);
-console.log(user);
-console.log(user);
-console.log(user);
-console.log(user);
-console.log(user);
+ var user = {
+ firstName: "Michel",
+ lastName: "Weststrate",
+ get fullName2 (){
+
+ return this.firstName + " " + this.lastName
+ },
+ fullname3 :function(){
+
+ return 'ha'
+ }(),
+ fullName: compu(function(){
+
+ //return this.firstName + " " + this.lastName
+ })
+ }
 
 
 
-user.lastName = "Vaillant"
-console.log(JSON.stringify(user));
+ console.log(user.fullname3);
+ console.log(user.fullname3);
+ console.log(user.fullname3);
+ console.log(user.fullname3);
+ console.log(user);
+ console.log(user);
+ console.log(user);
+ console.log(user);
+ console.log(user);
 
 
-*/
+
+ user.lastName = "Vaillant"
+ console.log(JSON.stringify(user));
+
+
+ */
 
 /*@test
  class teste {

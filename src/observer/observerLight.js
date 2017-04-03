@@ -8,6 +8,8 @@ const proxies = new WeakMap()
 const observers = new WeakMap()
 const queuedObservers = new Set()
 const queuedObserversComputed = new Set()
+const computedMap = new Map()
+
 var currentObservers = []
 const enumerate = Symbol('enumerate')
 let queued = false
@@ -18,8 +20,10 @@ module.exports = {
   proxies,
   observe,
   observable,
+  computedMap,
   isObservable,
   createObserver,
+  reaction,
   queueObservers
 }
 
@@ -59,6 +63,7 @@ function createObserver(options){
   runObserver(observer,true)
   return observer
 }
+
 
 function observable (obj) {
   obj = obj || {}
@@ -140,8 +145,17 @@ function registerObserver (target, key) {
 
 
 function set (target, key, value, receiver) {
+//  console.log('setting ',target,key,value,receiver)
 
-  if (key === 'length' || value !== Reflect.get(target, key, receiver)) {
+  //todo ignore computed values
+  var targetComputedSet = computedMap.get(key)
+  var isComputed = targetComputedSet && targetComputedSet.has(target)
+ /* if (targetComputedSet){
+     console.log(targetComputedSet.has(target))
+  }*/
+
+  if (key === 'length' || isComputed || value !== Reflect.get(target, key, receiver)) {
+ // if (key === 'length' || value !==  target[key]) {
 
     queueObservers(target, key)
     queueObservers(target, enumerate)
@@ -163,6 +177,10 @@ function queueObservers (target, key,runNow) {
     }
     return
   }*/
+ /* if (key === 'fullName' && runNow){
+    return
+  }*/
+
   const observersForKey = observers.get(target).get(key)
   if (observersForKey && observersForKey.constructor === Set) {
     observersForKey.forEach(queueObserver)
@@ -179,6 +197,8 @@ function queueObserver (observer) {
   }
 
   // queuedObservers.add(observer)
+
+
   if (observer.metaData === 'computed'){
     queuedObserversComputed.add(observer)
   } else {
@@ -188,7 +208,10 @@ function queueObserver (observer) {
 }
 
 function runObservers () {
- //Array.from(queuedObservers.entries())[0].forEach((obs)=>{
+/* Array.from(queuedObserversComputed.entries())[0].reverse().forEach((obs)=>{
+   runObserver(obs)
+ })*/
+  console.log('running observers')
   queuedObserversComputed.forEach((observer)=>{
     console.log('running observer computed', observer);
     runObserver(observer)
@@ -201,7 +224,7 @@ function runObservers () {
   })
 
 
-
+  console.log('clearing observers')
   queuedObserversComputed.clear()
   queuedObservers.clear()
   queued = false
@@ -211,12 +234,14 @@ function runObservers () {
 
 function runObserver (observer,firstRun) {
 
-  //console.log('Running Observer ',observer)
+  console.log('Running Observer ',observer)
   if (currentObserver){
     currentObservers.unshift(currentObserver)
   }
    currentObserver = observer
   //console.log('running',observer)
+
+   console.log(currentObservers)
   try {
     switch (observer.type){
       case 'autorun':
@@ -224,6 +249,7 @@ function runObserver (observer,firstRun) {
         observer.runs ++
         break
       case 'reaction':
+        console.log('i was here ',firstRun)
         if (firstRun){
           observer.fn.apply(observer.context, observer.args)
           observer.runs ++
