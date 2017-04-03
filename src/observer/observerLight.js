@@ -1,28 +1,26 @@
-
 'use strict'
 
 const nextTick = require('./nextTick')
-const builtIns = require('./builtIns/index')
+const builtIns = require('./builtIns')
 const wellKnowSymbols = require('./wellKnownSymbols')
 
 const proxies = new WeakMap()
 const observers = new WeakMap()
 const queuedObservers = new Set()
+const queuedObserversComputed = new Set()
+var currentObservers = []
 const enumerate = Symbol('enumerate')
-
-
 let queued = false
-let currentObservers = []
-
-const handlers = {get, set, ownKeys, deleteProperty}
+let currentObserver
+const handlers = {get, ownKeys, set, deleteProperty}
 
 module.exports = {
   proxies,
   observe,
-  reaction,
   observable,
   isObservable,
-  createObserver
+  createObserver,
+  queueObservers
 }
 
 function reaction (fn,context,cb,cbContext,...args) {
@@ -36,7 +34,6 @@ function reaction (fn,context,cb,cbContext,...args) {
   }
   return createObserver(options)
 }
-
 
 function observe (fn, context, ...args) {
   if (typeof fn !== 'function') {
@@ -54,16 +51,8 @@ function observe (fn, context, ...args) {
 
 
 function createObserver(options){
-
-
   const {type,fn,context,cb,cbContext,args,dontRun,metaData} = options
   const observer = {type,fn,context,args,cb,cbContext,metaData,observedKeys: [],runs:0, unobserve,exec,unqueue}
-
-
-  /*if (typeof context === 'object'){
-   toObservable(context)
-   }*/
-  console.log('DONT RUN?',dontRun)
   if (dontRun){
     return observer
   }
@@ -71,24 +60,19 @@ function createObserver(options){
   return observer
 }
 
-
-
-
 function observable (obj) {
   obj = obj || {}
   if (typeof obj !== 'object') {
     throw new TypeError('first argument must be an object or undefined')
   }
   return proxies.get(obj) || toObservable(obj)
-
 }
 
 function toObservable (obj) {
   let observable
   const builtIn = builtIns.get(obj.constructor)
   if (typeof builtIn === 'function') {
-    //console.log(builtIn)
-    observable = builtIn(obj, registerObserver, queueObserver)
+    observable = builtIn(obj, registerObserver, queueObservers)
   } else if (!builtIn) {
     observable = new Proxy(obj, handlers)
   } else {
@@ -98,15 +82,6 @@ function toObservable (obj) {
   proxies.set(observable, observable)
   observers.set(obj, new Map())
   return observable
-
-
-
- /*  let observable
-   observable = new Proxy(obj, handlers)
-   proxies.set(obj, observable)
-   proxies.set(observable, observable)
-   observers.set(obj, new Map())
-   return observable*/
 }
 
 function isObservable (obj) {
@@ -118,150 +93,131 @@ function isObservable (obj) {
 
 
 
+
+
+
+
+
+
+
+
 function get (target, key, receiver) {
-  console.log('GETTING ',key,target)
-
-
   if (key === '$raw') return target
-
-
-  if (key === 'toJSON') {
-    return function(){
-      return target
-    }
-  }
-
-
-  var result = Reflect.get(target, key, receiver)
-
-  if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {   //NOT OBSERVE WELL KNOWN SIMBOLS
+  const result = Reflect.get(target, key, receiver)
+  if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {
     return result
   }
- /* if (key === '@@toStringTag'){
-    return result
-  }*/
-
-  /* if(!proxies.get(target)){
-   console.log('sadfllksdjflksdfjlsdkfjsldkfjlsdkfjsldkfjsdlkfjsdlkfjsdlkfsldjkfd')
-   toObservable(target)
-   }*/
-
-
-
-  const isObject = (typeof result === 'object' && result) //typeof object its object (arrays are condierd objects too) or null por isso check result
+  const isObject = (typeof result === 'object' && result)
   let observable = isObject && proxies.get(result)
 
   if (!observable && isObject){
     observable =  toObservable(result)
   }
 
-  if (currentObservers.length > 0) {
-
+  if (currentObserver) {
     registerObserver(target, key)
     if (isObject) {
       return observable || toObservable(result)
     }
   }
-
-
   return observable || result
+}
+
+function registerObserver (target, key) {
+  if (currentObserver) {
+    const observersForTarget = observers.get(target)
+    let observersForKey = observersForTarget.get(key)
+    if (!observersForKey) {
+      observersForKey = new Set()
+      observersForTarget.set(key, observersForKey)
+    }
+    if (!observersForKey.has(currentObserver)) {
+      observersForKey.add(currentObserver)
+      currentObserver.observedKeys.push(observersForKey)
+    }
+  }
 }
 
 
 function set (target, key, value, receiver) {
 
+  if (key === 'length' || value !== Reflect.get(target, key, receiver)) {
 
-  if (key === 'length' || value !== Reflect.get(target, key, receiver)) { //lenght to observe changes in arrays
-
-//  if (value !== Reflect.get(target, key, receiver)) {
-    console.log('QueueObserver',target,key)
-    queueObserver(target, key)
-    queueObserver(target, enumerate)
+    queueObservers(target, key)
+    queueObservers(target, enumerate)
   }
   if (typeof value === 'object' && value) {
     value = value.$raw || value
   }
   return Reflect.set(target, key, value, receiver)
-
 }
 
-function registerObserver (target, key) {
-
-  if (currentObservers.length > 0) {
-    const observersForTarget = observers.get(target)
-    let observersForKey = observersForTarget.get(key)
-
-    currentObservers.forEach((currentObserver)=>{
-      if (!observersForKey) {
-        observersForKey = new Set()
-        observersForTarget.set(key, observersForKey)
-      }
-
-
-      if (!observersForKey.has(currentObserver)) {
-        observersForKey.add(currentObserver)
-       // console.log('observersForKey',observersForKey)
-        currentObserver.observedKeys.push(observersForKey)
-      }
-    })
-  }
-
-}
-
-
-function queueObserver (target,key) {
+function queueObservers (target, key,runNow) {
+/*  if (runNow){
+    const observersForKey = observers.get(target).get(key)
+    if (observersForKey) {
+      observersForKey.forEach((observer)=>{
+        console.log('running now observer', observer);
+        runObserver(observer)
+      })
+    }
+    return
+  }*/
   const observersForKey = observers.get(target).get(key)
-  if (observersForKey) {
-    observersForKey.forEach((observer)=>{
-      queuedObservers.add(observer)
-    })
+  if (observersForKey && observersForKey.constructor === Set) {
+    observersForKey.forEach(queueObserver)
+  } else if (observersForKey) {
+    queueObserver(observersForKey)
   }
+}
+
+function queueObserver (observer) {
+
   if (!queued) {
     nextTick(runObservers)
     queued = true
   }
+
+  // queuedObservers.add(observer)
+  if (observer.metaData === 'computed'){
+    queuedObserversComputed.add(observer)
+  } else {
+    queuedObservers.add(observer)
+  }
+
 }
 
 function runObservers () {
-  //reorder queuedobservers
-  var computedObservers = new Set()
-  var otherObservers = new Set()
-  console.log(queuedObservers)
+ //Array.from(queuedObservers.entries())[0].forEach((obs)=>{
+  queuedObserversComputed.forEach((observer)=>{
+    console.log('running observer computed', observer);
+    runObserver(observer)
+  })
   queuedObservers.forEach((observer)=>{
-    console.log(observer)
-    if (observer.metaData === 'computed'){
-
-      computedObservers.add(observer);
-    } else {
-      otherObservers.add(observer);
-    }
-  })
-
-  Array.from(computedObservers.values()).reverse().forEach((observer)=>{
+   // tmp2.unshift(observer)
+    //console.log(observer)
+    console.log('running observer regular', observer);
     runObserver(observer)
   })
 
-  Array.from(otherObservers.values()).forEach((observer)=>{
-    runObserver(observer)
-  })
 
-/*  queuedObservers.forEach((observer)=>{
-    runObserver(observer)
-  })*/
 
+  queuedObserversComputed.clear()
   queuedObservers.clear()
   queued = false
 }
 
+
+
 function runObserver (observer,firstRun) {
+
+  //console.log('Running Observer ',observer)
+  if (currentObserver){
+    currentObservers.unshift(currentObserver)
+  }
+   currentObserver = observer
+  //console.log('running',observer)
   try {
-    // if (firstRun){
-
-
-    currentObservers.unshift(observer)
-
-    console.log('running observer',observer,firstRun)
-
     switch (observer.type){
       case 'autorun':
         observer.fn.apply(observer.context, observer.args)
@@ -278,36 +234,34 @@ function runObserver (observer,firstRun) {
         break
     }
   } finally {
-    //  if (firstRun){
-    console.log('current observer ---->',currentObservers)
-    currentObservers.shift()
-    //  }
-
+    currentObserver = currentObservers.pop()
   }
 }
 
-function ownKeys (target) {  //uses in for in loops and  enumerate is just a simbol to tag enumeration
 
-    registerObserver(target, enumerate)
 
+
+
+
+
+
+
+
+function ownKeys (target) {
+  registerObserver(target, enumerate)
   return Reflect.ownKeys(target)
-}
-
-
-function unobserveKey (observersForKey) {
-  observersForKey.delete(this)
-}
-
-function unqueue () {
-  queuedObservers.delete(this)
 }
 
 function deleteProperty (target, key) {
   if (Reflect.has(target, key)) {
-    queueObserver(target, key)
-    queueObserver(target, enumerate)
+    queueObservers(target, key)
+    queueObservers(target, enumerate)
   }
   return Reflect.deleteProperty(target, key)
+}
+
+function exec () {
+  runObserver(this)
 }
 
 function unobserve () {
@@ -318,9 +272,10 @@ function unobserve () {
   }
 }
 
-function exec (firstRun) {
-  runObserver(this,firstRun)
+function unqueue () {
+  queuedObservers.delete(this)
 }
 
-
-
+function unobserveKey (observersForKey) {
+  observersForKey.delete(this)
+}

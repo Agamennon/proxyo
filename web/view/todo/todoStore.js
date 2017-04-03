@@ -8,10 +8,14 @@ class TodoStore {
     firstName = 'guilherme'
     lastName = 'guerchmann'
 
-    @computed get  fullName (){
-      console.log('computing name')
+   @computed get  fullName (){
+
       return this.firstName + ' ' + this.lastName
     }
+ /!* @computed get  fullNameUpper (){
+
+    return this.fullName.toUpperCase()
+  }*!/
      constructor(){
 
       }
@@ -51,8 +55,10 @@ class TodoStore {
     return this.firstName + ' ' + this.lastName
   }
   @computed get fullNameUpper (){
-    return (this.firstName + ' ' + this.lastName).toUpperCase()
+    return this.fullName.toUpperCase()
   }
+
+
   @computed get filtredTodos (){
     var matchesFilter = new RegExp(this.filter,'i')
     return this.todos.filter(todo=> !this.filter || matchesFilter.test(todo.value))

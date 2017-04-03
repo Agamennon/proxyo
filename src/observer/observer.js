@@ -119,7 +119,9 @@ function ownKeys (target) {
 }
 
 function set (target, key, value, receiver) {
+
   if (key === 'length' || value !== Reflect.get(target, key, receiver)) {
+
     queueObservers(target, key)
     queueObservers(target, enumerate)
   }
@@ -138,6 +140,7 @@ function deleteProperty (target, key) {
 }
 
 function queueObservers (target, key) {
+  console.log('queueobs')
   const observersForKey = observers.get(target).get(key)
   if (observersForKey && observersForKey.constructor === Set) {
     observersForKey.forEach(queueObserver)
@@ -147,6 +150,7 @@ function queueObservers (target, key) {
 }
 
 function queueObserver (observer) {
+
   if (!queued) {
     nextTick(runObservers)
     queued = true
@@ -155,6 +159,7 @@ function queueObserver (observer) {
 }
 
 function runObservers () {
+  console.log('runobservers ',queuedObservers)
   queuedObservers.forEach(runObserver)
   queuedObservers.clear()
   queued = false

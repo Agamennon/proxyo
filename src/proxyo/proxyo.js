@@ -1,11 +1,12 @@
 'use strict'
 
 /*
-var observable = require('../observer/observer').observable
-var interceptMap = require('../observer/observer').interceptMap
+ var observable = require('../observer/observer').observable
+ var interceptMap = require('../observer/observer').interceptMap
  var observer = require('../observer/observer')**/
 var observable = require('../observer/observerLight').observable
 var observer = require('../observer/observerLight')
+var queueObservers = require ('../observer/observerLight').queueObservers
 
 var computedMap = {};
 
@@ -56,45 +57,40 @@ function toObservable(target){
             enumerable: false,
             configurable: true,
             get: function(){
-              console.log('someone got ',item)
+
               if (item.observer.runs === 0){
-                 item.observer.exec(true)
+                item.observer.exec(true)
               }
               return item.computedResult
               //return computedResults[item.key].result
-
             }
           });
         })
       }
 
-
       var thisObs = observable(this);
-      function computedWraper(item){
-        console.log('computing',item)
-   //     computedResults[item.key] = item.get.call(this)
-        //computedResults[item.key].firstTime = !computedResults[item.key].firstTime
-        if (item.type === 'getter'){
 
+      function computedWraper(item){
+
+        console.log('computing ->',item.key)
+        if (item.type === 'getter'){
           item.computedResult = item.get.call(this)
         }
         if (item.type === 'function'){
           item.computedResult = item.value.call(this)
         }
+        if (item.observer.runs > 0){
+          queueObservers(this.$raw,item.key,true)
+        }
 
+    //   Promise.resolve().then(()=>{queueObserver(this.$raw,item.key)})
       }
+
       if (proxyoTEMP && proxyoTEMP.computed){
         proxyoTEMP.computed.forEach((item)=>{
-
-          //shedule on first observe
-          // observer.observe(computedWraper,thisObs,item)
-
-          //computedResults[item.key] =  observer.observe(computedWraper,thisObs,item)
-          //const {type,fn,context,cb,cbContext,args,dontRun} = options
           item.computedResult = undefined;
           item.observer = observer.createObserver({type:'autorun',metaData:'computed',fn:computedWraper,context:thisObs,args:[item],dontRun:true})
-
-//          computedResults[item.key] =  {observer:observerSignal,result:undefined}
+         // item.observer.exec(true)
         })
       }
     }

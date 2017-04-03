@@ -3,14 +3,92 @@ import ReactDOM from 'react-dom'
 //import {store1} from './stores/store'
 import {observer,observable,observe,replaceState,toObservable,computed,test,action,observerLight,computedMap,proxies} from '../../src/index'
 import React from 'react'
-
+/*
 import TodoList from './todo/TodoList'
 import {Provider} from '../../src/index'
 import todoStore from './todo/todoStore'
-//import todoViewModel from './todo/todoViewModal'
+//import todoViewModel from './todo/todoViewModal'*/
+
+
+/*  const observable1 = observer.observable({prop: 'value1'})
+  const observable2 = observer.observable({prop: 'value2'})
+
+  let numOfRuns1 = 0
+  let numOfRuns2 = 0
+  function test1 () {
+    observable1.prop = observable2.prop
+    numOfRuns1++
+  }
+  function test2 () {
+    observable2.prop = observable1.prop
+    numOfRuns2++
+  }
+  observer.observe(test1)
+  //setTimeout(()=>{
+  observer.observe(test2)
+  //},3000)
+
+  //Promise.resolve().then(()=>{})
+
+  Promise.resolve()
+      .then(() => observable1.prop = 'Hello')
+      .then(() => console.log('Hello =',observable2.prop))
+      .then(() => observable2.prop = 'World!')
+      .then(() => console.log('World! = ',observable1.prop))
+      .then(() => {
+         console.log('3 = ',numOfRuns1)
+         console.log('3 = ',numOfRuns2)
+      })*/
+
+
+
+
 
 
 /*
+
+var o =  {
+  a:10,
+  get doubleA (){
+    return a*2
+  }
+}
+
+var temp = 1
+
+Object.defineProperty(o,'a',{
+  enumerable: true,
+  configurable: true,
+  value:(function(){
+     return (temp * 100)
+
+  }()),
+  writable:true,
+  metadata:'hahahah'
+
+})
+
+var p = new Proxy(o,{
+  get:function(target, key, receiver){
+     console.log('get',key,target)
+     return Reflect.get(target,key)
+  },
+  set:function(target,key, value, receiver){
+     console.log('set',key,value)
+    console.log(Object.getOwnPropertyDescriptor(target,key))
+    return Reflect.set(target, key, value, receiver)
+  }
+})
+
+console.log(p.a)
+p.a = 40
+console.log(p.b)
+console.log(o.b)
+*/
+
+
+
+
 
 @toObservable
 class testA {
@@ -22,11 +100,14 @@ class testA {
   firstName = 'guilherme'
   lastName = 'guerchmann'
 
-  @computed get  fullName (){
-    console.log('computing name')
+   get  fullName (){
+
     return this.firstName + ' ' + this.lastName
   }
-  get evenItems () {
+   get fullNameUpper(){
+    return this.fullName.toUpperCase()
+  }
+    get evenItems () {
        return this.items.filter((item,index)=>{
          return true
        //return ((index % 2) === 0)
@@ -41,22 +122,30 @@ class testA {
 
 var obs = observer.observable(new testA());
 observer.observe(function(arg){
-   console.log('----------------------------------------------------->',obs.firstName)
-   console.log('----------------------------------------------------->',obs.fullName)
- //  console.log('----------------------------------------------------->',obs.evenItems)
+
+
+  console.log('----------------------------------------------------->',obs.fullName)
+ // console.log('----------------------------------------------------->',obs.fullNameUpper)
+  console.log('----------------------------------------------------->',obs.firstName)
+
+  // console.log('----------------------------------------------------->',obs.evenItems)
 })
 
 
 setTimeout(()=>{
 
  // obs.addItem('asdfasd')
-//  obs.addItem('odaaaaad4')
+ // obs.addItem('odaaaaad4')
+ // console.log('doing timeout')
   obs.firstName = 'lego'
+ // obs.lastName = 'goncalves'
 },3000)
-*/
 
 
 
+
+
+/*
 
 var state = replaceState ({
   todos:todoStore
@@ -70,6 +159,19 @@ ReactDOM.render(
     ,
     document.getElementById('app')
 )
+*/
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*

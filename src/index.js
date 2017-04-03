@@ -10,7 +10,6 @@ var observer = require('./observer/observer');
 var observerLight = require('./observer/observerLight');
 var proxyo = require('./proxyo/proxyo');*/
 var observer = require('./observer/observerLight');
-var observerLight = require('./observer/observerLight');
 var proxyo = require('./proxyo/proxyo');
 
 
@@ -20,6 +19,7 @@ module.exports = {
   observable:observer.observable,
   createObserver:observer.createObserver,
   isObservable:observer.isObservable,
+  queueObserver:observer.queueObserver,
   proxies:observer.proxies,
   toObservable:proxyo.toObservable,
   action:proxyo.action,

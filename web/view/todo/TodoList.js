@@ -17,17 +17,21 @@ export default class TodoList extends React.Component {
 
   render(){
     console.log('render todo List')
-    const {firstName,fullName,lastName} = this.props.todos;
+   // const {firstName,fullName,lastName,fullNameUpper} = this.props.todos;
+    const {firstName,fullName} = this.props.todos;
     return (
         <div>
-          <h1>todos first name = {firstName}</h1>
+    {/!*      <h1>todos first name = {firstName}</h1>*!/}
           <h1>todos fullname = {fullName}</h1>
+    {/!*      <h1>todos fullname UPPER= {fullNameUpper}</h1>*!/}
           <input value={firstName} onChange={this.changeName.bind(this)}/>
         </div>)
   }
 
 }
 */
+
+
 
 
 import React from 'react'

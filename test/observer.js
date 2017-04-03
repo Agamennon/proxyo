@@ -308,10 +308,6 @@ describe('nx-observe', () => {
         .then(() => expect(observable2.prop).to.equal('Hello'))
         .then(() => observable2.prop = 'World!')
         .then(() => expect(observable1.prop).to.equal('World!'))
-          .then(() => {
-              console.log('-------------------------------------------------',numOfRuns1)
-              console.log('-------------------------------------------------',numOfRuns2)
-          })
         .then(() => {
           expect(numOfRuns1).to.equal(3)
           expect(numOfRuns2).to.equal(3)

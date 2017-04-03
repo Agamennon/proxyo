@@ -6,7 +6,7 @@ let currTask
 
 module.exports = function nextTick (task) {
   currTask = task
-  if (mutateWithTask) {
+  if (mutateWithTask&&false) {
     mutateWithTask()
   } else {
     promise = promise.then(task)
@@ -18,7 +18,6 @@ if (typeof MutationObserver !== 'undefined') {
   const observer = new MutationObserver(onTask)
   const textNode = document.createTextNode(String(counter))
   observer.observe(textNode, {characterData: true})
-
   mutateWithTask = function mutateWithTask () {
     counter = (counter + 1) % 2
     textNode.textContent = counter
@@ -26,7 +25,9 @@ if (typeof MutationObserver !== 'undefined') {
 }
 
 function onTask () {
+  console.log('running queued observers ======================================')
   if (currTask) {
+
     currTask()
   }
 }
