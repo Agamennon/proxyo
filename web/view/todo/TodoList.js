@@ -1,16 +1,22 @@
-/*
-import React from 'react'
-import {connect} from '../../../src/index'
+/*import React from 'react'
+import {connect,state,observable} from '../../../src/index'
 import todoStore from '../todo/todoStore'
 
 
+
+var store = observable(todoStore)
+
+console.log(store)
 
 @connect
 export default class TodoList extends React.Component {
 
 
+
+
   changeName (e){
-    this.props.todos.firstName = e.target.value
+    console.log(e.target.value)
+    store.firstName = 'gato'
   }
 
 
@@ -18,17 +24,24 @@ export default class TodoList extends React.Component {
   render(){
     console.log('render todo List')
    // const {firstName,fullName,lastName,fullNameUpper} = this.props.todos;
-    const {firstName,fullName} = this.props.todos;
+    //const {firstName} = this.props.todos;
+    console.log(store.firstName)
+    const {firstName} = store;
     return (
         <div>
-    {/!*      <h1>todos first name = {firstName}</h1>*!/}
-          <h1>todos fullname = {fullName}</h1>
+          <h1>todos first name = {firstName}</h1>
+         {/!* <h1>todos fullname = {fullName}</h1>*!/}
     {/!*      <h1>todos fullname UPPER= {fullNameUpper}</h1>*!/}
           <input value={firstName} onChange={this.changeName.bind(this)}/>
         </div>)
   }
 
 }
+
+setTimeout(()=>{
+  console.log('timeout')
+  store.firstName = 'CARALEO'
+},2000)
 */
 
 

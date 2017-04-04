@@ -7,37 +7,6 @@ var toObservable = proxyo.toObservable
 var computed = proxyo.computed
 
 
-describe('proxyo', () => {
-  describe('computed', () => {
-    it('sould compute only once', () => {
-
-      var count = 0
-      @toObservable
-      class test {
-        firstName = "michel"
-        lastName = "wast"
-
-        @computed get fullName (){
-          count++
-          return this.firstName + ' ' + this.lastName
-        }
-      }
-
-      var obs = observer.observable(new test());
-      console.log(count)
-      return Promise.resolve()
-          .then(() => expect(obs.fullName).to.equal('michel wast'))
-          .then(() => expect(count).to.equal(1))
-          .then(() => expect(obs.fullName).to.equal('michel wast'))
-          .then(() => obs.firstName = 'gui')
-          .then(() => expect(obs.fullName).to.equal('gui wast'))
-          .then(() => expect(count).to.equal(2))
-
-    })
-  })
-})
-
-
 
 describe('nx-observe', () => {
   describe('observable', () => {

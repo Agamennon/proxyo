@@ -145,59 +145,120 @@ function registerObserver (target, key) {
 
 
 function set (target, key, value, receiver) {
+
+ // Reflect.set(target, key, value, receiver)
   var targetComputedSet = computedMap.get(key)
   var isComputed = targetComputedSet && targetComputedSet.has(target)
   if (key === 'length' || isComputed || value !== Reflect.get(target, key, receiver)) {
-    queueObservers(target, key)
-    queueObservers(target, enumerate)
+    if (typeof value === 'object' && value) {
+      value = value.$raw || value
+    }
+    Reflect.set(target, key, value, receiver)
+    if (isComputed){
+      queueObservers(target, key,true)
+    } else{
+      queueObservers(target, key)
+      queueObservers(target, enumerate)
+    }
+
   }
-  if (typeof value === 'object' && value) {
-    value = value.$raw || value
-  }
-  return Reflect.set(target, key, value, receiver)
+
+  return true
+ // return Reflect.set(target, key, value, receiver)
 }
 
 function queueObservers (target, key,runNow) {
-  /*  if (runNow){
-   const observersForKey = observers.get(target).get(key)
-   if (observersForKey) {
-   observersForKey.forEach((observer)=>{
-   console.log('running now observer', observer);
-   runObserver(observer)
-   })
-   }
-   return
-   }*/
-  /* if (key === 'fullName' && runNow){
-   return
-   }*/
+  if (runNow && true){
+    //only trigger computed?
+    const observersForKey = observers.get(target).get(key)
+    if (observersForKey) {
+      observersForKey.forEach((observer)=>{
+        //console.log('running now observer', observer);
+       // console.log(observer,currentObserver)
+
+        if (observer.metaData === 'computed'){
+          //  console.log('running')
+            runObserver(observer)
+        } else {
+          queueObserver(observer)
+          if (currentObserver.metaData === 'computed'){
+           // queueObserver(observer)
+          }
+         // console.log(currentObserver)
+         // console.log(observer)
+       //
+        }
+
+      })
+    }
+    return
+  }
+
+
 
   const observersForKey = observers.get(target).get(key)
   if (observersForKey && observersForKey.constructor === Set) {
+
     observersForKey.forEach(queueObserver)
   } else if (observersForKey) {
+
     queueObserver(observersForKey)
   }
 }
 
 function queueObserver (observer) {
+ // console.log(observer)
+
+  //var go = observer !== currentObserver
+  //console.log(go)
+  var go = observer !== currentObserver
+
+  currentObservers.forEach((ob)=>{
+    if (ob === observer){
+      //console.log('found the motherfucker')
+      go = false
+    }
+  })
+// console.log(go)
+
+
   if (!queued) {
     nextTick(runObservers)
     queued = true
   }
-  if (observer.metaData === 'computed'){
-    queuedObserversComputed.add(observer)
-  } else {
-    queuedObservers.add(observer)
-  }
+
+  /*  if (!(observer in currentObservers)){
+   console.log(observer)
+   console.log('NOOOOT')
+   } else {
+   console.log('IIINNN')
+   }*/
+
+
+
+  if((go)){
+  //if((observer !== currentObserver)){
+    if (observer.metaData === 'computed'){
+    //  console.log('queueing computed observer')
+
+     // queuedObserversComputed.add(observer)
+      runObserver(observer)
+    } else {
+    //  console.log('queueing observer')
+      queuedObservers.add(observer)
+    }
+ }
+
 
 }
 
 function runObservers () {
   queuedObserversComputed.forEach((observer)=>{
+
     runObserver(observer)
   })
   queuedObservers.forEach((observer)=>{
+
     runObserver(observer)
   })
   queuedObserversComputed.clear()
@@ -205,9 +266,12 @@ function runObservers () {
   queued = false
 }
 
+
+
 function runObserver (observer,firstRun) {
+
   if (currentObserver){
-    currentObservers.unshift(currentObserver)
+    currentObservers.push(currentObserver)
   }
   currentObserver = observer
   try {
@@ -227,6 +291,7 @@ function runObserver (observer,firstRun) {
         break
     }
   } finally {
+  //  console.log('finishing observer',observer.args ? ' computed' : '')
     currentObserver = currentObservers.pop()
   }
 }

@@ -9,7 +9,7 @@ export {CreateState,globalState,
 var observer = require('./observer/observer');
 var observerLight = require('./observer/observerLight');
 var proxyo = require('./proxyo/proxyo');*/
-var observer = require('./observer/observerLight');
+var observer = require('./observer/observerFinal');
 var proxyo = require('./proxyo/proxyo');
 
 
@@ -29,6 +29,7 @@ module.exports = {
   state:proxyo.state,
   intercept:proxyo.intercept,
   connect: require('./proxyo/connect'),
+  connect2: require('./proxyo/connect2'),
   Provider: require('./proxyo/provider'),
 }
 

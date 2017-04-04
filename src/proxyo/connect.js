@@ -2,7 +2,7 @@
 
 var React = require ('react')
 //var observer = require('../observer/observer')
-var observer = require('../observer/observerLight')
+var observer = require('../observer/observerFinal')
 var isObjectShallowModified = require ('./isShallow');
 var toClass = require ('./toClass');
 var hoistStatics = require('./hoist-non-react-statics');

@@ -140,7 +140,7 @@ function deleteProperty (target, key) {
 }
 
 function queueObservers (target, key) {
-  console.log('queueobs')
+
   const observersForKey = observers.get(target).get(key)
   if (observersForKey && observersForKey.constructor === Set) {
     observersForKey.forEach(queueObserver)
@@ -159,7 +159,7 @@ function queueObserver (observer) {
 }
 
 function runObservers () {
-  console.log('runobservers ',queuedObservers)
+
   queuedObservers.forEach(runObserver)
   queuedObservers.clear()
   queued = false

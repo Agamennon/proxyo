@@ -9,6 +9,7 @@ const proxies = new WeakMap()
 const observers = new WeakMap()
 const queuedObservers = new Set()
 const enumerate = Symbol('enumerate')
+const computedMap = new Map()
 
 
 let queued = false
@@ -20,11 +21,12 @@ const handlers = {get, set, ownKeys, deleteProperty}
 module.exports = {
   proxies,
   observe,
+  computedMap,
   reaction,
   observable,
   isObservable,
   createObserver,
-  queueObserver,
+  queueObservers:queueObserver,
 }
 
 function none (){
@@ -225,14 +227,11 @@ function queueObserver (target,key,runNow) {
     const observersForKey = observers.get(target).get(key)
     if (observersForKey) {
       observersForKey.forEach((observer)=>{
-        none('running NOW')
         runObserver(observer)
       })
     }
     return
   }
-
-  none('QueueObserver',target,key,queued)
   const observersForKey = observers.get(target).get(key)
   if (observersForKey) {
     observersForKey.forEach((observer)=>{
@@ -275,11 +274,11 @@ function runObservers () {
 
 
 function runObserver (observer,firstRun) {
-  console.log('firstRun',firstRun)
+
   var whatobs = observer.args ? observer.args[0].key : 'view'
-  none('running observer for ',whatobs)
+
   if (currentObserver){
-    none('unshifiting observer')
+
     currentObservers.unshift(currentObserver)
   }
   currentObserver = observer

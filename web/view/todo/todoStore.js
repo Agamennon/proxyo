@@ -1,17 +1,19 @@
 /*
+
 import {observable, observe, action,isObservable,computed, state, toObservable} from '../../../src/index'
 
 
-@toObservable
+
+
 class TodoStore {
 
     firstName = 'guilherme'
     lastName = 'guerchmann'
 
-   @computed get  fullName (){
+   /!*@computed get  fullName (){
 
       return this.firstName + ' ' + this.lastName
-    }
+    }*!/
  /!* @computed get  fullNameUpper (){
 
     return this.fullName.toUpperCase()
