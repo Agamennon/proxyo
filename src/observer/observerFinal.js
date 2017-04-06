@@ -7,7 +7,6 @@ const wellKnowSymbols = require('./wellKnownSymbols')
 const proxies = new WeakMap()
 const observers = new WeakMap()
 const queuedObservers = new Set()
-const queuedObserversComputed = new Set()
 const computedMap = new Map()
 
 var currentObservers = []
@@ -19,6 +18,7 @@ const handlers = {get, ownKeys, set, deleteProperty}
 module.exports = {
   proxies,
   observe,
+  when,
   observable,
   computedMap,
   isObservable,
@@ -43,6 +43,7 @@ function observe (fn, context, ...args) {
   if (typeof fn !== 'function') {
     throw new TypeError('First argument must be a function')
   }
+
   const options = {
     type:'autorun',
     fn:fn,
@@ -52,6 +53,15 @@ function observe (fn, context, ...args) {
   return createObserver(options)
 }
 
+function when (predicate,effect){
+  const options = {
+    type:'when',
+    fn:predicate,
+    cb:effect
+
+  }
+  return createObserver(options)
+}
 
 
 function createObserver(options){
@@ -60,7 +70,7 @@ function createObserver(options){
   if (dontRun){
     return observer
   }
-  runObserver(observer,true)
+  runObserver(observer)
   return observer
 }
 
@@ -108,6 +118,14 @@ function isObservable (obj) {
 
 function get (target, key, receiver) {
   if (key === '$raw') return target
+
+  //stringify correctly
+  if (key === 'toJSON') {
+    return function(){
+      return target
+    }
+  }
+
   const result = Reflect.get(target, key, receiver)
   if (typeof key === 'symbol' && wellKnowSymbols.has(key)) {
     return result
@@ -145,8 +163,6 @@ function registerObserver (target, key) {
 
 
 function set (target, key, value, receiver) {
-
- // Reflect.set(target, key, value, receiver)
   var targetComputedSet = computedMap.get(key)
   var isComputed = targetComputedSet && targetComputedSet.has(target)
   if (key === 'length' || isComputed || value !== Reflect.get(target, key, receiver)) {
@@ -154,144 +170,83 @@ function set (target, key, value, receiver) {
       value = value.$raw || value
     }
     Reflect.set(target, key, value, receiver)
-    if (isComputed){
-      queueObservers(target, key,true)
-    } else{
+    if (!isComputed){
       queueObservers(target, key)
       queueObservers(target, enumerate)
     }
-
   }
-
   return true
- // return Reflect.set(target, key, value, receiver)
 }
 
-function queueObservers (target, key,runNow) {
-  if (runNow && true){
-    //only trigger computed?
-    const observersForKey = observers.get(target).get(key)
-    if (observersForKey) {
-      observersForKey.forEach((observer)=>{
-        //console.log('running now observer', observer);
-       // console.log(observer,currentObserver)
-
-        if (observer.metaData === 'computed'){
-          //  console.log('running')
-            runObserver(observer)
-        } else {
-          queueObserver(observer)
-          if (currentObserver.metaData === 'computed'){
-           // queueObserver(observer)
-          }
-         // console.log(currentObserver)
-         // console.log(observer)
-       //
-        }
-
-      })
-    }
-    return
-  }
-
-
-
+function queueObservers (target, key) {
   const observersForKey = observers.get(target).get(key)
   if (observersForKey && observersForKey.constructor === Set) {
-
     observersForKey.forEach(queueObserver)
   } else if (observersForKey) {
-
     queueObserver(observersForKey)
   }
 }
 
 function queueObserver (observer) {
- // console.log(observer)
-
-  //var go = observer !== currentObserver
-  //console.log(go)
-  var go = observer !== currentObserver
-
+  var allow = observer !== currentObserver
   currentObservers.forEach((ob)=>{
     if (ob === observer){
-      //console.log('found the motherfucker')
-      go = false
+      allow = false
     }
   })
-// console.log(go)
-
 
   if (!queued) {
     nextTick(runObservers)
     queued = true
   }
 
-  /*  if (!(observer in currentObservers)){
-   console.log(observer)
-   console.log('NOOOOT')
-   } else {
-   console.log('IIINNN')
-   }*/
-
-
-
-  if((go)){
-  //if((observer !== currentObserver)){
+  if((allow)){
     if (observer.metaData === 'computed'){
-    //  console.log('queueing computed observer')
-
-     // queuedObserversComputed.add(observer)
       runObserver(observer)
     } else {
-    //  console.log('queueing observer')
       queuedObservers.add(observer)
     }
- }
-
+  }
 
 }
 
 function runObservers () {
-  queuedObserversComputed.forEach((observer)=>{
-
-    runObserver(observer)
-  })
   queuedObservers.forEach((observer)=>{
-
     runObserver(observer)
   })
-  queuedObserversComputed.clear()
   queuedObservers.clear()
   queued = false
 }
 
 
-
-function runObserver (observer,firstRun) {
-
+function runObserver (observer) {
+  let whenResult = false
   if (currentObserver){
     currentObservers.push(currentObserver)
   }
   currentObserver = observer
   try {
-    switch (observer.type){
-      case 'autorun':
-        observer.fn.apply(observer.context, observer.args)
-        observer.runs ++
-        break
-      case 'reaction':
-        if (firstRun){
-          observer.fn.apply(observer.context, observer.args)
-          observer.runs ++
-        } else {
-          observer.cb.apply(observer.cbContext, observer.args)
-          observer.runs ++
-        }
-        break
+    const type = observer.type
+    if (type === 'autorun'){
+      observer.fn.apply(observer.context, observer.args)
     }
+    if (type === 'reaction'){
+      observer.runs === 0 ?
+      observer.fn.apply(observer.context, observer.args) :
+      observer.cb.apply(observer.cbContext, observer.args)
+    }
+    if (type === 'when'){
+      whenResult = observer.fn.apply()
+      if (whenResult){
+        observer.cb.apply(observer.cbContext, observer.args)
+      }
+    }
+
+    observer.runs ++
   } finally {
-  //  console.log('finishing observer',observer.args ? ' computed' : '')
+    if (observer.type === 'when' && whenResult){
+      observer.unobserve()
+    }
     currentObserver = currentObservers.pop()
   }
 }

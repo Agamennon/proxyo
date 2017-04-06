@@ -20,6 +20,7 @@ module.exports = {
   createObserver:observer.createObserver,
   computedMap:observer.computedMap,
   isObservable:observer.isObservable,
+  when:observer.when,
   proxies:observer.proxies,
   toObservable:proxyo.toObservable,
   action:proxyo.action,

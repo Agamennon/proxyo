@@ -31,9 +31,7 @@ export default  new TodoStore()
 
 import {observable, observe, action,isObservable,computed, state, toObservable} from '../../../src/index'
 
-
-
-
+@toObservable
 class Todo {
   value
   id

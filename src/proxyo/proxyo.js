@@ -44,55 +44,30 @@ function action (...params){
 function toObservable(target){
 
   return class extends target {
+
     constructor(...args) {
+
       var proxyoTEMP = target.prototype.__proxyoTEMP, targetSet
       delete target.prototype.__proxyoTEMP
       var computedResults = {}
-      super(args);
-      if (proxyoTEMP && proxyoTEMP.computed){
-        proxyoTEMP.computed.forEach((item)=>{
-          targetSet = computedMap.get(item.key)
-          if (!targetSet){
-            targetSet = new Set().add(this)
-            computedMap.set(item.key,targetSet)
-
-          } else{
-            targetSet.add(this)
-          }
-          delete target.prototype[item.key]
-          Object.defineProperty(target.prototype, item.key, {
-            enumerable: false,
-            configurable: true,
-            get: function(){
-              if (item.observer.runs === 0){
-                item.observer.exec(true)
-              }
-          //    console.log('returning '+item.key+' returned '+item.computedResult)
-              return item.computedResult
-            },
-            set: function(val){
-              if (!item.set){
-                throw new Error ('No setter was defined for '+item.key + ' calculated property')
-              }
-
-              item.set.call(this,val)
-            }
-          });
-        })
-      }
+      super(args)
       var thisObs = observable(this);
+
       function computedWraper(item){
 
         if (item.type === 'getter'){
           //   console.log('computing...')
-             item.computedResult = item.get.call(this)
+          item.computedResult = item.get.call(this)
           //   console.log('computing done!')
         }
         if (item.type === 'function'){
           item.computedResult = item.value.call(this)
+          this[item.key] = item.computedResult
         }
         if (item.observer.runs > 0){
-            queueObservers(this.$raw,item.key,true)
+
+          //notify that change happened
+          queueObservers(this.$raw,item.key,true)
         }
 
       }
@@ -103,10 +78,47 @@ function toObservable(target){
           //item.observer.exec(true)
         })
       }
+
+      if (proxyoTEMP && proxyoTEMP.computed){
+        proxyoTEMP.computed.forEach((item)=>{
+          //Add computed property to computed collection of the framework
+          targetSet = computedMap.get(item.key)
+          if (!targetSet){
+            targetSet = new Set().add(this)
+            computedMap.set(item.key,targetSet)
+
+          } else{
+            targetSet.add(this)
+          }
+          delete target.prototype[item.key]
+
+          if (item.type === 'getter'){
+            Object.defineProperty(target.prototype, item.key, {
+              enumerable: false,
+              configurable: true,
+              get: function(){
+                if (item.observer.runs === 0){
+                  item.observer.exec(true)
+                }
+                return item.computedResult
+              },
+              set: function(val){
+                if (!item.set){
+                  throw new TypeError ('No setter was defined for '+item.key + ' calculated property')
+                }
+                item.set.call(this,val)
+              }
+            });
+          }
+          if (item.type === 'function'){
+            item.observer.exec(true)
+            this[item.key] = item.computedResult
+          }
+        })
+      }
+
     }
   }
-
-
 
 }
 
@@ -149,4 +161,89 @@ module.exports = {
   state,
   action
 }
+
+
+
+/*
+
+crap
+
+/!*  target.prototype.constructor = function(){
+ console.log('merdalhufos')
+ }
+ target.constructor = function(){
+ console.log('merdalhufos2')
+ }*!/
+
+var base = function(name){
+  this.name = name;
+  console.log('base constructed')
+}
+base.prototype = {
+  say : function(){
+    console.log('saying')
+  }
+}
+var original = target.prototype
+target.prototype = Object.create(base.prototype);
+for (var key in original)  {
+  target.constructor.prototype[key] = original[key];
+}
+Object.defineProperty(target.prototype, 'constructor', {
+  enumerable: false,
+  value: function(...args){
+    base.apply(this,args)
+    original.constructor.constructor(args)
+    //original.prototype.constructor.apply(this,args)
+  }
+})
+
+/!*
+ var original = Object.assign({},target.prototype)
+ for (var key in original)  {
+ base.constructor.prototype[key] = original[key];
+ }
+ Object.defineProperty(target.prototype, 'constructor', {
+ enumerable: false,
+ value: function(...args){
+ base.apply(this,args)
+ original.constructor.apply(this,args)
+ }
+ });
+ *!/
+
+console.log(target.prototype)
+
+/!* for (var key in origProto)  {
+ sub.constructor.prototype[key] = origProto[key];
+ }
+
+ Object.defineProperty(sub.constructor.prototype, 'constructor', {
+ enumerable: false,
+ value: sub
+ });*!/
+
+/!* for (var key in origProto)  {
+ sub.prototype[key] = origProto[key];
+ }*!/
+
+/!* origProto = sub.prototype
+
+ sub.prototype = Object.create(base.prototype)
+ console.log(sub.prototype)
+ for (var key in origProto)  {
+ sub.prototype[key] = origProto[key];
+ }
+ Object.defineProperty(sub.prototype, 'constructor', {
+ enumerable: false,
+ value: sub
+ });*!/
+
+var t = new target('teste')
+
+
+console.log(t)
+return target
+*/
+
 

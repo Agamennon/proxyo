@@ -116,6 +116,32 @@ describe('nx-observe', () => {
     })
   })
 
+  describe('when', () => {
+    it('should call when true and unregister', () => {
+      let dummy = 'not yet'
+      let count = 0;
+      const observable = observer.observable({counter: 0})
+
+      observer.when(()=>{
+        return observable.counter === 10
+      },()=>{
+        count ++
+        dummy = 'victory'
+      })
+      return Promise.resolve()
+          .then(() => expect(dummy).to.equal('not yet'))
+          .then(() => observable.counter = 7)
+          .then(() => expect(dummy).to.equal('not yet'))
+          .then(() => observable.counter = 10)
+          .then(() => expect(dummy).to.equal('victory'))
+          .then(() => expect(count).to.equal(1))
+          .then(() => observable.counter = 7)
+          .then(() => observable.counter = 10)
+          .then(() => expect(count).to.equal(1))
+
+    })
+  })
+
 
 
   describe('observe', () => {
